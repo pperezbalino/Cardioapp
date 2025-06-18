@@ -1,0 +1,1 @@
+Backup provisional de módulos actuales de CardioApp antes de nueva integración.
