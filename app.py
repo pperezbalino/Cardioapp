@@ -49,7 +49,7 @@ if not st.session_state.disclaimer_accepted:
 # Mostrar logo y título
 st.image("logo.png", width=120)
 
-st.info(translations[lang]["Disclaimer"])
+st.info(translations[lang]["disclaimer_text"])
 st.title("🫀 CardioApp")
 
 # Sección: Scores (expandible)
