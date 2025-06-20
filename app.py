@@ -9,7 +9,8 @@ idioma_nombres = {
     "fr": "Français",
     "it": "Italiano",
     "de": "Deutsch",
-    "pt": "Português"
+    "pt": "Português",
+    "ar": "Árabe"
 }
 
 # Configuración general
@@ -47,6 +48,8 @@ if not st.session_state.disclaimer_accepted:
 
 # Mostrar logo y título
 st.image("logo.png", width=120)
+
+st.info(translations[lang]["Disclaimer"])
 st.title("🫀 CardioApp")
 
 # Sección: Scores (expandible)
