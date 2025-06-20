@@ -21,6 +21,18 @@ if "language" not in st.session_state:
 lang_legible = st.selectbox("Idioma", [idioma_nombres[k] for k in idioma_nombres])
 lang = [k for k, v in idioma_nombres.items() if v == lang_legible][0]
 st.session_state.language = lang
+
+# RTL support for Arabic
+if lang == "ar":
+    st.markdown("""
+        <style>
+        body, div, input, label, select, textarea {
+            direction: rtl;
+            text-align: right;
+        }
+        </style>
+    """, unsafe_allow_html=True)
+
 t = translations[lang]
 
 # Disclaimer
