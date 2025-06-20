@@ -34,7 +34,7 @@ if lang == "ar":
         </style>
     """, unsafe_allow_html=True)
 
-t = translations[lang]
+t = translations.get(lang, translations["en"])
 
 # Disclaimer
 if "disclaimer_accepted" not in st.session_state:
