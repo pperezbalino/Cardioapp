@@ -1,44 +1,33 @@
-# CardioApp
+# 🫀 CardioApp
 
-**CardioApp** is an educational application designed for cardiovascular risk evaluation, clinical score calculation, emergency drug dosing, and AI-assisted ECG interpretation.
+**CardioApp** es una herramienta médica educativa diseñada para ayudar a profesionales de la salud a calcular scores de riesgo cardiovascular y otras herramientas clínicas clave.
 
-> ⚠️ This application is intended for educational use only and does not replace professional medical judgment.
+## 🔧 Funcionalidades incluidas
 
-## Features
+- **Framingham Score** (ATP III): estima el riesgo cardiovascular a 10 años en base a edad, colesterol, tabaquismo, hipertensión, etc. Clasifica el riesgo en **bajo, moderado o alto** e incluye recomendaciones clínicas personalizadas.
+- **EuroSCORE II**: riesgo quirúrgico en cirugía cardíaca.
+- **Índice de Masa Corporal (BMI)**
+- **CHA₂DS₂-VASc**
+- **HAS-BLED**
+- **TIMI y GRACE**
+- **Filtrado Glomerular (CKD-EPI)**
+- **Calculadora de infusión de drogas de urgencia**
+- **Análisis de ECG basado en IA (modo demo)**
 
-- Framingham Risk Score (with prevention recommendations)
-- EuroSCORE II
-- CHA₂DS₂–VASc Score
-- HAS-BLED Score
-- GRACE Score
-- TIMI Score
-- BMI Calculator
-- CKD-EPI (eGFR calculation)
-- Emergency Drug Infusion Calculator
-- ECG interpretation from image or PDF via AI
-- Multi-language support (Spanish, English, French, Italian, Portuguese, German, Arabic)
-- Custom disclaimer per language on first use
+## 🌍 Multilenguaje
 
-## How to Run
+Disponible en: español, inglés, francés, italiano, alemán y portugués.
 
-You can run this app via Streamlit:
+## 📄 Exportación a PDF
 
-```bash
-streamlit run app.py
+Cada cálculo puede exportarse a PDF incluyendo:
+- Logo de la app
+- Título y resultado
+- Disclaimer traducido al idioma del usuario
+
+## 📦 Requisitos
+
 ```
-
-Ensure the following files are present in the same directory:
-
-- `app.py` – Main application file
-- `logo.png` – App icon
-- `tools/` – Folder containing the individual score modules and calculators
-
-## Contact
-
-For feedback, bug reports, or suggestions, contact:  
-**Pablo Pérez Baliño**  
-📧 pperezbalino@gmail.com
-
----
-
-© 2025 CardioApp. All rights reserved.
+streamlit
+reportlab
+```
