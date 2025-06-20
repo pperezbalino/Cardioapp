@@ -18,7 +18,7 @@ st.set_page_config(page_title="CardioApp", layout="centered")
 # Selector de idioma
 if "language" not in st.session_state:
     st.session_state.language = "es"
-lang_legible = st.selectbox("Idioma", [idioma_nombres[k] for k in translations.keys()])
+lang_legible = st.selectbox("Idioma", [idioma_nombres[k] for k in idioma_nombres])
 lang = [k for k, v in idioma_nombres.items() if v == lang_legible][0]
 st.session_state.language = lang
 t = translations[lang]
@@ -37,30 +37,30 @@ if not st.session_state.disclaimer_accepted:
 st.image("logo.png", width=120)
 st.title("🫀 CardioApp")
 
-# Sección Scores
-st.header(t["scores"])
-score_option = st.selectbox(t["select_score"], [
-    t["framingham"], t["euroscore"], t["chads"], t["grace"], t["timi"], t["bmi"], t["ckd"]
-])
-if score_option == t["framingham"]:
-    framingham.calcular(t)
-elif score_option == t["euroscore"]:
-    euroscore.calcular(t)
-elif score_option == t["chads"]:
-    chads_vasc.calcular(t)
-elif score_option == t["grace"]:
-    grace.calcular(t)
-elif score_option == t["timi"]:
-    timi.calcular(t)
-elif score_option == t["bmi"]:
-    bmi.calcular(t)
-elif score_option == t["ckd"]:
-    ckd_epi.calcular(t)
+# Sección: Scores (expandible)
+with st.expander(t["scores"]):
+    score_option = st.selectbox(t["select_score"], [
+        t["framingham"], t["euroscore"], t["chads"], t["grace"], t["timi"], t["bmi"], t["ckd"]
+    ])
+    if score_option == t["framingham"]:
+        framingham.calcular(t)
+    elif score_option == t["euroscore"]:
+        euroscore.calcular(t)
+    elif score_option == t["chads"]:
+        chads_vasc.calcular(t)
+    elif score_option == t["grace"]:
+        grace.calcular(t)
+    elif score_option == t["timi"]:
+        timi.calcular(t)
+    elif score_option == t["bmi"]:
+        bmi.calcular(t)
+    elif score_option == t["ckd"]:
+        ckd_epi.calcular(t)
 
-# Sección Drogas
-st.header(t["drugs"])
-drug_calculator.calcular(t)
+# Sección: Drogas (expandible)
+with st.expander(t["drugs"]):
+    drug_calculator.calcular(t)
 
-# Sección ECG
-st.header(t["ecg"])
-ecg_analysis.calcular(t)
+# Sección: ECG (expandible)
+with st.expander(t["ecg"]):
+    ecg_analysis.calcular(t)
