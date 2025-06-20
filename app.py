@@ -2,15 +2,24 @@ import streamlit as st
 from tools import framingham, euroscore, chads_vasc, grace, timi, bmi, ckd_epi, drug_calculator, ecg_analysis
 from translations import translations
 
-# Configuración de idioma
+# Idiomas legibles
+idioma_nombres = {
+    "es": "Español",
+    "en": "English",
+    "fr": "Français",
+    "it": "Italiano",
+    "de": "Deutsch",
+    "pt": "Português"
+}
+
+# Configuración general
 st.set_page_config(page_title="CardioApp", layout="centered")
+
+# Selector de idioma
 if "language" not in st.session_state:
     st.session_state.language = "es"
-lang = st.selectbox(
-    "Idioma / Language / Langue / Sprache / Idioma / اللغة",
-    list(translations.keys()),
-    index=list(translations.keys()).index(st.session_state.language)
-)
+lang_legible = st.selectbox("Idioma", [idioma_nombres[k] for k in translations.keys()])
+lang = [k for k, v in idioma_nombres.items() if v == lang_legible][0]
 st.session_state.language = lang
 t = translations[lang]
 
@@ -24,34 +33,34 @@ if not st.session_state.disclaimer_accepted:
         st.session_state.disclaimer_accepted = True
     st.stop()
 
-# Interfaz principal
+# Mostrar logo y título
+st.image("logo.png", width=120)
 st.title("🫀 CardioApp")
-option = st.selectbox(t["select_function"], [t["scores"], t["drugs"], t["ecg"]])
 
-if option == t["scores"]:
-    score_option = st.selectbox(t["select_score"], [
-        t["framingham"], t["euroscore"], t["chads"], t["grace"], t["timi"], t["bmi"], t["ckd"]
-    ])
+# Sección Scores
+st.header(t["scores"])
+score_option = st.selectbox(t["select_score"], [
+    t["framingham"], t["euroscore"], t["chads"], t["grace"], t["timi"], t["bmi"], t["ckd"]
+])
+if score_option == t["framingham"]:
+    framingham.calcular(t)
+elif score_option == t["euroscore"]:
+    euroscore.calcular(t)
+elif score_option == t["chads"]:
+    chads_vasc.calcular(t)
+elif score_option == t["grace"]:
+    grace.calcular(t)
+elif score_option == t["timi"]:
+    timi.calcular(t)
+elif score_option == t["bmi"]:
+    bmi.calcular(t)
+elif score_option == t["ckd"]:
+    ckd_epi.calcular(t)
 
-    if score_option == t["framingham"]:
-        framingham.calcular(t)
-    elif score_option == t["euroscore"]:
-        euroscore.calcular(t)
-    elif score_option == t["chads"]:
-        chads_vasc.calcular(t)
-    elif score_option == t["grace"]:
-        grace.calcular(t)
-    elif score_option == t["timi"]:
-        timi.calcular(t)
-    elif score_option == t["bmi"]:
-        bmi.calcular(t)
-    elif score_option == t["ckd"]:
-        ckd_epi.calcular(t)
+# Sección Drogas
+st.header(t["drugs"])
+drug_calculator.calcular(t)
 
-elif option == t["drugs"]:
-    st.subheader(t["drugs_title"])
-    drug_calculator.calcular(t)
-
-elif option == t["ecg"]:
-    st.subheader(t["ecg_title"])
-    ecg_analysis.calcular(t)
+# Sección ECG
+st.header(t["ecg"])
+ecg_analysis.calcular(t)
