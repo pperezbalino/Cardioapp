@@ -36,13 +36,10 @@ def calcular(t):
         riesgo = min(max(int(puntos), 1), 30)
         categoria = t["high"] if riesgo >= 20 else t["moderate"] if riesgo >= 10 else t["low"]
 
-        # Mostrar resultado en pantalla
-        st.markdown(f"### {t['result']}")
-        st.success(f"{t['10yr_risk']}: **{riesgo}%**")
-        st.info(f"{t['risk_level']}: **{categoria}**")
+        recomendacion = t["recommendation_moderate"]
+        if riesgo >= 20:
+            recomendacion = t["recommendation_high"]
+        elif riesgo < 10:
+            recomendacion = t["recommendation_low"]
 
-        # Generar texto para el PDF
-        pdf_text = f"""{t['framingham']}\n\n{t['age']}: {edad}\n{t['total_chol']}: {colesterol_total}\n{t['hdl']}: {hdl}\n{t['sbp']}: {sistolica}\n{t['smoker']}: {"Sí" if fumador else "No"}\n{t['diabetes']}: {"Sí" if diabetes else "No"}\n{t['sex']}: {sexo}\n\n{t['10yr_risk']}: {riesgo}%\n{t['risk_level']}: {categoria}"""
-
-        # Mostrar PDF integrado
-        render_pdf_view(t["framingham"], pdf_text, t)
+        st.success(f"{t['10yr_risk']}: {riesgo}%\n{t['risk_level']}: {categoria}\n{t['recommendation']}: {recomendacion}")
