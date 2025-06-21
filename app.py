@@ -3,14 +3,13 @@ from tools import framingham, euroscore, chads_vasc, grace, timi, bmi, ckd_epi, 
 from translations import translations
 
 # Idiomas legibles
-idioma_nombres = {
-    "es": "Español",
+idioma_nombres = {"es": "Español",
     "en": "English",
     "fr": "Français",
     "it": "Italiano",
     "de": "Deutsch",
-    "pt": "Português"
-}
+    "pt": "Português",
+    "ar": "Árabe"}
 
 # Configuración general
 st.set_page_config(page_title="CardioApp", layout="centered")
