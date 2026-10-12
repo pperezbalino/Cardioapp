@@ -30,6 +30,7 @@ Use Python 3.11 or 3.12. No API key is required and no external AI service is ca
 - Conversion of a prescribed infusion dose and actual final dilution to mL/h.
 - Pro: manual ECG reports with validated image/PDF uploads and an embedded original file.
 - Pro: PDF downloads for every calculator and manual ECG report, including inputs, units, sources, UTC time and version metadata.
+- Pro: guideline ECG reference in emergency intake before diagnostic selection, including sex/age-specific STEMI thresholds and special interpretation contexts.
 - Pro: shared adult clinical case for emergency/outpatient forms, with unknown/present/absent states, provenance, explicit review and session-local revisions.
 
 STS is not implemented. Automatic ECG interpretation is not implemented. The app does not claim otherwise.
