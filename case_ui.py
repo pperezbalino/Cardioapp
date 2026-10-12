@@ -2,7 +2,7 @@
 import streamlit as st
 
 from access import Feature, allows, current_access
-from clinical_case import FIELD_SPECS, create_case, raw_values, save_case, require_owner, matches_saved
+from clinical_case import FIELD_SPECS, create_case, raw_values, save_case, require_owner, matches_saved, usable_inputs
 
 
 def render_case(t, mode):
@@ -81,12 +81,15 @@ def render_case(t, mode):
         st.session_state[review_key] = False
     st.session_state['_clinical_draft'] = new_draft
     confirmed = st.checkbox(t['case_review'], value=case.review_state == 'reviewed', key=review_key)
-    unsaved = not matches_saved(case, values, alias, mode)
+    usable, saved_alias, pending = usable_inputs(context, case, values, alias)
+    for field in pending:
+        st.caption(t['case_field_pending'].format(field=t[field]))
+    unsaved = not matches_saved(case, usable, saved_alias, mode)
     if unsaved:
         st.caption(t['case_unsaved'])
     if st.button(t['case_save'], key=prefix+'save'):
         try:
-            case = save_case(context, case, values, mode=mode, alias=alias, confirmed=confirmed)
+            case = save_case(context, case, usable, mode=mode, alias=saved_alias, confirmed=confirmed)
             st.session_state['_clinical_case'] = case
             unsaved = False
             for key in list(st.session_state):
@@ -100,4 +103,7 @@ def render_case(t, mode):
     st.caption(f"{t['case_version']}: {case.revision} · {t[state]}")
 
     from integrated_ui import render_integrated
-    render_integrated(context, case, t, unsaved=unsaved)
+    # Direct structured entries can be assessed immediately. This transient snapshot
+    # neither confirms the stored case nor grants report/PDF review.
+    preview = save_case(context, case, usable, mode=mode, alias=saved_alias, confirmed=True)
+    render_integrated(context, case, t, unsaved=unsaved, preview=preview)

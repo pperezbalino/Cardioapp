@@ -8,14 +8,13 @@ from copilot_provider import simulate
 from acs_pathways import pathway, SOURCE, AHA_SOURCE, nitrate_assessment
 
 
-def render_integrated(context, case, t, *, unsaved):
+def render_integrated(context, case, t, *, unsaved, preview=None):
     require_owner(context, case)
     st.subheader(t['integrated_title'])
     st.caption(t['integrated_notice'])
-    if unsaved:
-        st.info(t['case_unsaved'])
-        return
-    treatment = pathway(context, case)
+    assessment = preview if preview is not None else case
+    require_owner(context, assessment)
+    treatment = pathway(context, assessment)
     if treatment:
         st.subheader(t['acs_pathway'])
         st.caption(t['acs_pathway_notice'])
@@ -24,7 +23,7 @@ def render_integrated(context, case, t, *, unsaved):
             st.write(t['inputs'] + ': ' + ', '.join(t[k] for k in treatment.reasons))
         if treatment.missing:
             st.write(t['score_missing'].format(fields=', '.join(t[k] for k in treatment.missing)))
-        nitrate = nitrate_assessment(context, case)
+        nitrate = nitrate_assessment(context, assessment)
         if nitrate:
             st.info(t[nitrate.status])
             if nitrate.missing:
@@ -33,16 +32,16 @@ def render_integrated(context, case, t, *, unsaved):
             st.write(t[step])
         st.caption(SOURCE)
         st.caption(AHA_SOURCE)
-    issues = consistency(context, case)
+    issues = consistency(context, assessment)
     for issue in issues:
         st.warning(t[issue.code])
-    priority = emergency_priority(context, case)
+    priority = emergency_priority(context, assessment)
     if priority:
         st.warning(t['activation_'+priority.activation])
         st.caption(t['stemi_reference'])
         st.caption('ESC ACS (2023), 5.2.1 / 5.3: https://doi.org/10.1093/eurheartj/ehad191')
         st.caption(t['secondary_scores'])
-    scores = evaluate(context, case)
+    scores = evaluate(context, assessment)
     for score in scores:
         with st.expander(t[score.algorithm_id], expanded=score.status == 'ready'):
             st.write(score_text(score, t))
@@ -55,9 +54,12 @@ def render_integrated(context, case, t, *, unsaved):
                     st.caption(t[NOTES[score.algorithm_id]])
                 for source in SOURCES[score.algorithm_id]:
                     st.caption(source)
-    simulation = simulate(context, case)
+    simulation = simulate(context, assessment)
     assert simulation.simulated and not simulation.model_calls
     st.caption(t['simulation_notice'])
+    if unsaved:
+        st.caption(t['case_report_save'])
+        return
     prefix = 'case_report:' + case.case_id + ':' + t['_lang'] + ':' + case.mode + ':'
     records = st.session_state.get('_clinical_reports', {})
     record = records.get((case.case_id, t['_lang'], case.mode))

@@ -174,7 +174,7 @@ def save_case(context, case, raw_values, *, mode, alias='', confirmed=False):
     require_owner(context, case)
     if mode not in ('emergency', 'outpatient') or not isinstance(confirmed, bool):
         raise ValueError('mode')
-    if not isinstance(alias, str) or not re.fullmatch(r'[A-Za-z0-9_-]{0,32}', alias):
+    if not isinstance(alias, str) or len(alias) > 32 or any(ord(c) < 32 or ord(c) == 127 for c in alias):
         raise ValueError('alias')
     if set(raw_values) != set(FIELDS):
         raise ValueError('fields')
@@ -218,6 +218,26 @@ def raw_values(case):
         else:
             result[spec.key] = '' if value is None else format(value, 'g') if isinstance(value, float) else str(value)
     return result
+
+
+def usable_inputs(context, case, values, alias):
+    """Use valid current entries; invalid entries are unknown, never stale facts."""
+    require_owner(context, case)
+    usable, pending = {}, []
+    for spec in FIELD_SPECS:
+        raw = values[spec.key]
+        try:
+            parse_value(spec, raw)
+            usable[spec.key] = raw
+        except ValueError:
+            usable[spec.key] = 'unknown' if spec.kind in ('tri', 'acs', 'strategy', 'response', 'sex') else ''
+            pending.append(spec.key)
+    # Alias is optional metadata and must never prevent clinical assessment.
+    label = alias.strip()
+    if len(label) > 32 or any(ord(c) < 32 or ord(c) == 127 for c in label):
+        label = case.alias
+        pending.append('case_alias')
+    return usable, label, tuple(pending)
 
 
 def matches_saved(case, values, alias, mode):
