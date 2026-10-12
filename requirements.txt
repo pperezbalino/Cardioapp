@@ -1,4 +1,4 @@
-# Runtime rebuild: 2026.10.12-scores-2 (GRACE mortality and HAS-BLED)
+# Runtime rebuild: 2026.10.12-ecg-reference-1 (Pro emergency ECG reference)
 streamlit>=1.49,<2
 reportlab>=4.2,<5
 pillow>=10.4,<13

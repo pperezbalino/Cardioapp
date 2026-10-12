@@ -33,6 +33,9 @@ def render_case(t, mode):
     selected_context = st.session_state.get(prefix+'acs_context', draft['raw']['acs_context'])
     from integrated_ui import render_priority_notice
     render_priority_notice(t, mode, selected_context)
+    if mode == 'emergency':
+        from ecg_criteria import render_stemi_ecg_reference
+        render_stemi_ecg_reference(context, t)
     values = {}
     # Coronary triage precedes the long general intake in emergency mode.
     groups = {}
