@@ -4,7 +4,7 @@ This review branch extends stage 1 without deployment, billing, API credentials 
 
 ## Clinical workflow
 
-Both intake modes use the same confirmed clinical case. New schema 1.2 inputs start unknown. Missing or unconfirmed inputs never count as negative, normal or zero. Forms accept the displayed canonical units only; adapters reject inconsistent unit metadata and never silently convert values. Free text stays physician-entered narrative, without automatic extraction or diagnoses.
+Both intake modes use the same confirmed clinical case. New schema 1.3 inputs start unknown. Missing or unconfirmed inputs never count as negative, normal or zero. Forms accept the displayed canonical units only; adapters reject inconsistent unit metadata and never silently convert values. Free text stays physician-entered narrative, without automatic extraction or diagnoses.
 
 Emergency care supports the initial chest-pain workflow:
 

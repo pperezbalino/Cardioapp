@@ -9,9 +9,9 @@ from access import Feature, require
 from clinical_case import FIELD_SPECS, utc_now
 from integrated_engine import checked, case_hash, known, evaluate, consistency, emergency_priority
 from pdf_utils import make_report, generate_pdf
-from acs_pathways import pathway, SOURCE, AHA_SOURCE
+from acs_pathways import pathway, SOURCE, AHA_SOURCE, nitrate_assessment
 
-TEMPLATE_VERSION = '2A.2-ACS'
+TEMPLATE_VERSION = '2A.3-NTG'
 _REVIEW_KEY = secrets.token_bytes(32)
 
 
@@ -22,7 +22,7 @@ def field_value(spec, value, t):
         return t['case_present' if value else 'case_absent']
     if spec.kind == 'sex':
         return t[value]
-    if spec.kind in ('acs', 'strategy'):
+    if spec.kind in ('acs', 'strategy', 'response'):
         return t[value]
     if spec.kind == 'number':
         return f'{value:g}' + (f' {spec.unit}' if spec.unit and spec.unit != 'years' else '')
@@ -91,7 +91,7 @@ def require_reviewed_case(context, case):
     if case.review_state != 'reviewed' or any(
         datum.value is not None and not datum.confirmed for datum in case.facts.values()):
         raise ValueError('report_required')
-    if any(issue.code in ('bp_order', 'chol_order', 'cad_history', 'sest_lysis_conflict') for issue in consistency(context, case)):
+    if any(issue.code in ('bp_order', 'chol_order', 'cad_history', 'sest_lysis_conflict', 'pain_response_conflict') for issue in consistency(context, case)):
         raise ValueError('report_required')
 
 
@@ -166,6 +166,9 @@ def export_draft(context, case, draft, t):
         results.insert(0, (t['stemi'], t['stemi_priority']))
         results.insert(1, (t['reperfusion_activated'], t['activation_'+priority.activation]))
     if treatment:
+        nitrate = nitrate_assessment(context, case)
+        if nitrate:
+            results.append((t['case_group_antiischaemic'], t[nitrate.status]))
         results += [(t['acs_pathway'], t[treatment.route]), (t['acs_pathway'], t['acs_pathway_notice'])]
         results += [(t['acs_pathway'], t[step]) for step in treatment.supplemental]
         if treatment.missing:

@@ -40,7 +40,7 @@ def render_case(t, mode):
         groups.setdefault(spec.group, []).append(spec)
     order = list(groups)
     if mode == 'emergency':
-        order = ['triage', 'presentation', 'reperfusion', 'acs_risk', 'acs_treatment'] + [g for g in order if g not in ('triage', 'presentation', 'reperfusion', 'acs_risk', 'acs_treatment')]
+        order = ['triage', 'presentation', 'reperfusion', 'acs_risk', 'acs_treatment', 'antiischaemic'] + [g for g in order if g not in ('triage', 'presentation', 'reperfusion', 'acs_risk', 'acs_treatment', 'antiischaemic')]
     for group in order:
         specifications = groups[group]
         with st.expander(t['case_group_'+group], expanded=group in ('identity', 'presentation', 'triage', 'reperfusion')):
@@ -57,6 +57,11 @@ def render_case(t, mode):
                         format_func=lambda x: t['case_unknown'] if x == 'unknown' else t[x], key=key)
                 elif spec.kind == 'strategy':
                     options = ['unknown', 'primary_pci', 'transfer_pci', 'fibrinolysis']
+                    values[spec.key] = st.selectbox(t[spec.key], options, index=options.index(initial),
+                        format_func=lambda x: t['case_unknown'] if x == 'unknown' else t[x], key=key)
+                elif spec.kind == 'response':
+                    options = ['unknown', 'not_yet_treated', 'under_treatment', 'pain_controlled',
+                               'persistent_despite_treatment', 'contraindicated_or_intolerant']
                     values[spec.key] = st.selectbox(t[spec.key], options, index=options.index(initial),
                         format_func=lambda x: t['case_unknown'] if x == 'unknown' else t[x], key=key)
                 elif spec.kind == 'sex':

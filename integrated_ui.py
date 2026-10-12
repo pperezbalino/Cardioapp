@@ -5,7 +5,7 @@ from clinical_case import require_owner, FIELDS
 from integrated_engine import case_hash, evaluate, consistency, emergency_priority
 from case_reports import (create_draft, edit_draft, review_draft, export_draft, score_text, field_value)
 from copilot_provider import simulate
-from acs_pathways import pathway, SOURCE, AHA_SOURCE
+from acs_pathways import pathway, SOURCE, AHA_SOURCE, nitrate_assessment
 
 
 def render_integrated(context, case, t, *, unsaved):
@@ -24,6 +24,11 @@ def render_integrated(context, case, t, *, unsaved):
             st.write(t['inputs'] + ': ' + ', '.join(t[k] for k in treatment.reasons))
         if treatment.missing:
             st.write(t['score_missing'].format(fields=', '.join(t[k] for k in treatment.missing)))
+        nitrate = nitrate_assessment(context, case)
+        if nitrate:
+            st.info(t[nitrate.status])
+            if nitrate.missing:
+                st.caption(t['score_missing'].format(fields=', '.join(t[k] for k in nitrate.missing)))
         for step in treatment.supplemental:
             st.write(t[step])
         st.caption(SOURCE)

@@ -6,7 +6,7 @@ The recovered logo and the three main sections (scores, infusions and ECG) are p
 
 ## Free and Pro pilot
 
-Free is the default: independent calculators, without advertising or report generation. Pro pilot access adds shared emergency/outpatient cases, deterministic integrated assessment, editable reviewed report drafts and PDF/manual ECG reports. The target Pro price is US$5.99/month; no billing or AI is active. Access is verified by server-configured invitations, not a browser plan selector. See [STAGE1.md](STAGE1.md) for the access foundation and [STAGE2A.md](STAGE2A.md) for the integrated workflow and [ACS_PATHWAYS.md](ACS_PATHWAYS.md) for the separate CEST/SEST therapeutic reference paths and their review limits.
+Free is the default: independent calculators, without advertising or report generation. Pro pilot access adds shared emergency/outpatient cases, deterministic integrated assessment, editable reviewed report drafts and PDF/manual ECG reports. The target Pro price is US$5.99/month; no billing or AI is active. Access is verified by server-configured invitations, not a browser plan selector. See [STAGE1.md](STAGE1.md) for the access foundation and [STAGE2A.md](STAGE2A.md) for the integrated workflow and [ACS_PATHWAYS.md](ACS_PATHWAYS.md) for the separate CEST/SEST therapeutic reference paths, guideline-based NTG reference and their review limits.
 
 ## Run locally
 

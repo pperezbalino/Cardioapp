@@ -9,7 +9,7 @@ import uuid
 
 from access import Feature, require
 
-SCHEMA_VERSION = '1.2'
+SCHEMA_VERSION = '1.3'
 
 
 @dataclass(frozen=True)
@@ -65,6 +65,9 @@ FIELD_SPECS = [
     FieldSpec('antiplatelet_plan', 'acs_treatment', 'text'),
     FieldSpec('anticoagulation_plan', 'acs_treatment', 'text'),
     FieldSpec('support_plan', 'acs_treatment', 'text'),
+    FieldSpec('antiischaemic_given', 'antiischaemic', 'text'),
+    FieldSpec('angina_response', 'antiischaemic', 'response'),
+    FieldSpec('ntg_contraindications', 'antiischaemic', 'tri'),
     FieldSpec('killip', 'score_context', 'number', None, 1, 4),
     *[FieldSpec(key, 'score_context', 'tri') for key in [
         'arrest', 'st_deviation', 'timi_st', 'known_cad', 'aspirin', 'angina',
@@ -139,6 +142,11 @@ def parse_value(spec, raw):
         if raw not in ('unknown', 'primary_pci', 'transfer_pci', 'fibrinolysis'):
             raise ValueError(spec.key)
         return None if raw == 'unknown' else raw
+    if spec.kind == 'response':
+        if raw not in ('unknown', 'not_yet_treated', 'under_treatment', 'pain_controlled',
+                       'persistent_despite_treatment', 'contraindicated_or_intolerant'):
+            raise ValueError(spec.key)
+        return None if raw == 'unknown' else raw
     if spec.kind == 'sex':
         if raw not in ('unknown', 'M', 'F'):
             raise ValueError(spec.key)
@@ -205,7 +213,7 @@ def raw_values(case):
         value = value.value if value else None
         if spec.kind == 'tri':
             result[spec.key] = 'unknown' if value is None else 'present' if value else 'absent'
-        elif spec.kind in ('sex', 'acs', 'strategy'):
+        elif spec.kind in ('sex', 'acs', 'strategy', 'response'):
             result[spec.key] = value or 'unknown'
         else:
             result[spec.key] = '' if value is None else format(value, 'g') if isinstance(value, float) else str(value)

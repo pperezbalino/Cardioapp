@@ -25,7 +25,7 @@ def checked(context, case):
             raise ValueError('unit:' + spec.key)
         value = fact.value
         raw = ('unknown' if value is None else 'present' if value else 'absent') if spec.kind == 'tri' else (
-            'unknown' if value is None else value) if spec.kind in ('sex', 'acs', 'strategy') else (
+            'unknown' if value is None else value) if spec.kind in ('sex', 'acs', 'strategy', 'response') else (
             '' if value is None else str(value))
         if parse_value(spec, raw) != value:
             raise ValueError(spec.key)
@@ -48,6 +48,8 @@ class Issue:
 def consistency(context, case):
     checked(context, case)
     issues = []
+    if known(case, 'refractory_pain') is True and known(case, 'angina_response') == 'not_yet_treated':
+        issues.append(Issue('pain_response_conflict', ('refractory_pain', 'angina_response')))
     if known(case, 'acs_context') == 'ua_nstemi' and known(case, 'reperfusion_strategy') == 'fibrinolysis':
         issues.append(Issue('sest_lysis_conflict', ('acs_context', 'reperfusion_strategy')))
     if known(case, 'known_cad') is True and known(case, 'vascular_disease') is False:
