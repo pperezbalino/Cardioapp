@@ -10,6 +10,7 @@ import streamlit as st
 
 from clinical_ui import fingerprint, show_result
 from pdf_utils import make_report, generate_pdf
+from access import Feature, allows, require, current_access
 
 MAX_BYTES = 10 * 1024 * 1024
 
@@ -42,7 +43,8 @@ def validate_upload(data, filename):
         raise ValueError('invalid_file') from error
 
 
-def manual_report(data, filename, initials, registration, findings, confirmed, t):
+def manual_report(data, filename, initials, registration, findings, confirmed, t, *, context=None):
+    require(context, Feature.MANUAL_ECG)
     validate_upload(data, filename)
     if not all([initials.strip(), registration.strip(), findings.strip(), confirmed]):
         raise ValueError('ecg_required')
@@ -51,12 +53,16 @@ def manual_report(data, filename, initials, registration, findings, confirmed, t
               (t['file_hash'], hashlib.sha256(data).hexdigest()),
               (t['confirm_manual'], t['yes'])]
     report = make_report(t['ecg'], inputs, [(t['findings'], findings.strip()),
-                         (t['result'], t['manual_status'])], t['ecg_note'], [t['manual_status']], t)
+                         (t['result'], t['manual_status'])], t['ecg_note'], [t['manual_status']], t, context=context)
     report['attachment'] = {'name': Path(filename).name, 'data': data}
     return report
 
 
 def calcular(t):
+    context = current_access()
+    if not allows(context, Feature.MANUAL_ECG):
+        st.info(t['pro_required'])
+        return
     st.subheader(t['ecg']); st.info(t['ecg_note'])
     uploaded = st.file_uploader(t['upload'], type=['png', 'jpg', 'jpeg', 'pdf'], key='ecg:upload')
     data = uploaded.getvalue() if uploaded is not None else b''
@@ -85,9 +91,9 @@ def calcular(t):
         try:
             if not valid:
                 raise ValueError('ecg_required')
-            report = manual_report(data, filename, initials, registration, findings, confirmed, t)
+            report = manual_report(data, filename, initials, registration, findings, confirmed, t, context=context)
             st.session_state['report:ecg'] = {'fingerprint': fingerprint(values, t),
-                                            'report': report, 'pdf': generate_pdf(report, t)}
+                                            'report': report, 'pdf': generate_pdf(report, t, context=context)}
         except ValueError as error:
             st.session_state.pop('report:ecg', None); st.error(t[str(error)])
     show_result('ecg', values, t)

@@ -151,3 +151,72 @@ for row in _CATALOG.strip().splitlines():
         if key in translations[lang]:
             raise ValueError(f'Duplicate translation: {key}')
         translations[lang][key] = value
+
+_STAGE1_CATALOG = '''
+workspace|Área de trabajo|Workspace|Espace de travail|Area di lavoro|Arbeitsbereich|Área de trabalho|مساحة العمل
+tools_nav|Herramientas independientes|Independent tools|Outils indépendants|Strumenti indipendenti|Unabhängige Werkzeuge|Ferramentas independentes|أدوات مستقلة
+emergency|Urgencias|Emergency care|Urgences|Urgenze|Notfallversorgung|Urgências|الطوارئ
+outpatient|Consulta ambulatoria|Outpatient consultation|Consultation ambulatoire|Visita ambulatoriale|Ambulante Sprechstunde|Consulta ambulatorial|العيادة الخارجية
+pilot_login|Acceso al piloto Pro|Pro pilot access|Accès au pilote Pro|Accesso al pilota Pro|Zugang zum Pro-Pilotprojekt|Acesso ao piloto Pro|الوصول إلى تجربة Pro
+invitation_code|Código de invitación|Invitation code|Code d'invitation|Codice di invito|Einladungscode|Código de convite|رمز الدعوة
+login|Ingresar al piloto|Enter pilot|Accéder au pilote|Accedi al pilota|Am Pilotprojekt teilnehmen|Entrar no piloto|الدخول إلى التجربة
+logout|Cerrar acceso Pro|End Pro access|Fermer l'accès Pro|Chiudi accesso Pro|Pro-Zugang beenden|Encerrar acesso Pro|إنهاء وصول Pro
+price_note|Piloto por invitación. Precio objetivo Pro: US${price}/mes. Sin cobros activos.|Invitation-only pilot. Target Pro price: US${price}/month. No active billing.|Pilote sur invitation. Prix cible Pro : US${price}/mois. Aucun paiement actif.|Pilota su invito. Prezzo obiettivo Pro: US${price}/mese. Nessun addebito attivo.|Pilotprojekt auf Einladung. Pro-Zielpreis: US${price}/Monat. Keine aktive Abrechnung.|Piloto por convite. Preço-alvo Pro: US${price}/mês. Sem cobranças ativas.|تجربة بالدعوة. السعر المستهدف Pro: US${price}/شهر. لا توجد فوترة نشطة.
+invalid_invitation|Invitación inválida o vencida.|Invalid or expired invitation.|Invitation invalide ou expirée.|Invito non valido o scaduto.|Ungültige oder abgelaufene Einladung.|Convite inválido ou expirado.|دعوة غير صالحة أو منتهية.
+login_wait|Demasiados intentos. Esperá un minuto antes de reintentar.|Too many attempts. Wait one minute before retrying.|Trop de tentatives. Attendre une minute avant de réessayer.|Troppi tentativi. Attendi un minuto prima di riprovare.|Zu viele Versuche. Vor dem nächsten Versuch eine Minute warten.|Muitas tentativas. Aguarde um minuto antes de tentar novamente.|محاولات كثيرة. انتظر دقيقة قبل المحاولة مجدداً.
+pro_required|Esta función requiere acceso Pro. Free mantiene las calculadoras independientes.|This feature requires Pro access. Free retains the independent calculators.|Cette fonction nécessite Pro. Free conserve les calculateurs indépendants.|Questa funzione richiede Pro. Free mantiene i calcolatori indipendenti.|Diese Funktion erfordert Pro. Free enthält die unabhängigen Rechner.|Esta função requer Pro. Free mantém as calculadoras independentes.|تتطلب هذه الميزة وصول Pro. تبقى الحاسبات المستقلة في Free.
+feature_unavailable|Esta función todavía no está habilitada.|This feature is not enabled yet.|Cette fonction n'est pas encore activée.|Questa funzione non è ancora abilitata.|Diese Funktion ist noch nicht aktiviert.|Esta função ainda não está habilitada.|هذه الميزة غير مفعّلة بعد.
+case_title|Caso clínico compartido|Shared clinical case|Cas clinique partagé|Caso clinico condiviso|Gemeinsamer klinischer Fall|Caso clínico compartilhado|الحالة السريرية المشتركة
+case_notice|Datos solo en esta sesión; no es un historial permanente. Usá un identificador pseudónimo, sin nombre ni documento.|Data stays in this session; this is not a permanent history. Use a pseudonymous ID, without a name or identity document.|Données limitées à cette session, sans historique permanent. Utiliser un identifiant pseudonyme, sans nom ni document d'identité.|Dati solo in questa sessione, senza storico permanente. Usa un identificativo pseudonimo, senza nome o documento.|Daten nur in dieser Sitzung; keine dauerhafte Akte. Pseudonym verwenden, ohne Namen oder Ausweisdaten.|Dados apenas nesta sessão; não é histórico permanente. Use identificador pseudônimo, sem nome nem documento.|البيانات في هذه الجلسة فقط؛ ليست سجلاً دائماً. استخدم معرّفاً مستعاراً دون اسم أو وثيقة هوية.
+case_scope|Formularios de adultos. Texto ingresado por el médico; sin extracción por IA, integración de scores ni recomendaciones automáticas en esta etapa.|Adult forms. Clinician-entered text; no AI extraction, integrated scores or automated recommendations at this stage.|Formulaires adultes. Texte saisi par le médecin ; sans extraction IA, scores intégrés ni recommandations automatiques à ce stade.|Moduli per adulti. Testo inserito dal medico; nessuna estrazione IA, punteggi integrati o raccomandazioni automatiche in questa fase.|Formulare für Erwachsene. Ärztliche Texteingabe; derzeit keine KI-Extraktion, integrierten Scores oder automatischen Empfehlungen.|Formulários de adultos. Texto inserido pelo médico; sem extração por IA, scores integrados ou recomendações automáticas nesta etapa.|نماذج للبالغين. نص يدخله الطبيب؛ دون استخراج بالذكاء الاصطناعي أو نقاط مدمجة أو توصيات آلية في هذه المرحلة.
+case_alias|Identificador pseudónimo (letras, números, guion)|Pseudonymous ID (letters, numbers, hyphen)|Identifiant pseudonyme (lettres, chiffres, tiret)|Identificativo pseudonimo (lettere, numeri, trattino)|Pseudonym (Buchstaben, Zahlen, Bindestrich)|Identificador pseudônimo (letras, números, hífen)|معرّف مستعار (حروف لاتينية وأرقام وشرطة)
+case_new|Nuevo caso|New case|Nouveau cas|Nuovo caso|Neuer Fall|Novo caso|حالة جديدة
+case_save|Guardar datos del caso|Save case data|Enregistrer les données du cas|Salva dati del caso|Falldaten speichern|Salvar dados do caso|حفظ بيانات الحالة
+case_review|Revisé los datos ingresados. Los campos desconocidos siguen sin confirmar.|I reviewed the entered data. Unknown fields remain unconfirmed.|J'ai vérifié les données saisies. Les champs inconnus restent non confirmés.|Ho verificato i dati inseriti. I campi sconosciuti restano non confermati.|Ich habe die Eingaben geprüft. Unbekannte Felder bleiben unbestätigt.|Revisei os dados inseridos. Campos desconhecidos continuam sem confirmação.|راجعت البيانات المدخلة. تبقى الحقول المجهولة غير مؤكدة.
+case_saved|Datos guardados en esta sesión.|Data saved in this session.|Données enregistrées dans cette session.|Dati salvati in questa sessione.|Daten in dieser Sitzung gespeichert.|Dados salvos nesta sessão.|تم حفظ البيانات في هذه الجلسة.
+case_unsaved|Hay cambios sin guardar; requieren una nueva revisión.|There are unsaved changes; a new review is required.|Modifications non enregistrées ; nouvelle vérification nécessaire.|Modifiche non salvate; è necessaria una nuova verifica.|Ungespeicherte Änderungen; erneute Prüfung erforderlich.|Há alterações não salvas; uma nova revisão é necessária.|توجد تغييرات غير محفوظة؛ يلزم مراجعتها مجدداً.
+case_invalid|Revisá el campo: {field}. Los números aceptan punto o coma decimal; no separadores de miles.|Check the field: {field}. Numbers accept a decimal point or comma; no thousands separators.|Vérifier le champ : {field}. Point ou virgule décimale acceptés ; sans séparateur de milliers.|Controlla il campo: {field}. Punto o virgola decimale accettati; nessun separatore delle migliaia.|Feld prüfen: {field}. Dezimalpunkt oder -komma erlaubt; keine Tausendertrennzeichen.|Revise o campo: {field}. Números aceitam ponto ou vírgula decimal; sem separador de milhares.|راجع الحقل: {field}. يسمح بفاصلة أو نقطة عشرية؛ دون فواصل آلاف.
+case_version|Versión del caso|Case version|Version du cas|Versione del caso|Fallversion|Versão do caso|إصدار الحالة
+case_draft|Datos en borrador|Draft data|Données en brouillon|Dati in bozza|Datenentwurf|Dados em rascunho|بيانات مسودة
+case_reviewed|Datos revisados por el médico|Data reviewed by clinician|Données vérifiées par le médecin|Dati verificati dal medico|Ärztlich geprüfte Daten|Dados revisados pelo médico|بيانات راجعها الطبيب
+case_unknown|Desconocido / no informado|Unknown / not provided|Inconnu / non renseigné|Sconosciuto / non indicato|Unbekannt / nicht angegeben|Desconhecido / não informado|مجهول / غير مذكور
+case_present|Presente|Present|Présent|Presente|Vorhanden|Presente|موجود
+case_absent|Ausente|Absent|Absent|Assente|Nicht vorhanden|Ausente|غير موجود
+case_group_identity|Datos generales|General data|Données générales|Dati generali|Allgemeine Daten|Dados gerais|البيانات العامة
+case_group_presentation|Motivo y cronología|Reason and timeline|Motif et chronologie|Motivo e cronologia|Anlass und zeitlicher Verlauf|Motivo e cronologia|السبب والتسلسل الزمني
+case_group_symptoms|Síntomas|Symptoms|Symptômes|Sintomi|Symptome|Sintomas|الأعراض
+case_group_history|Antecedentes y factores de riesgo|History and risk factors|Antécédents et facteurs de risque|Anamnesi e fattori di rischio|Anamnese und Risikofaktoren|Antecedentes e fatores de risco|السوابق وعوامل الخطر
+case_group_treatment|Tratamientos y alergias|Treatment and allergies|Traitements et allergies|Terapie e allergie|Behandlung und Allergien|Tratamentos e alergias|العلاجات والحساسية
+case_group_examination|Examen físico|Physical examination|Examen clinique|Esame obiettivo|Körperliche Untersuchung|Exame físico|الفحص السريري
+case_group_laboratory|Laboratorio|Laboratory|Biologie|Laboratorio|Labor|Laboratório|المختبر
+case_group_studies|Estudios complementarios|Investigations|Examens complémentaires|Esami complementari|Zusatzuntersuchungen|Exames complementares|الفحوص التكميلية
+case_group_notes|Notas clínicas|Clinical notes|Notes cliniques|Note cliniche|Klinische Notizen|Notas clínicas|الملاحظات السريرية
+chief_complaint|Motivo de consulta|Reason for consultation|Motif de consultation|Motivo della visita|Vorstellungsgrund|Motivo da consulta|سبب الاستشارة
+onset|Inicio y evolución de los síntomas|Symptom onset and course|Début et évolution des symptômes|Esordio ed evoluzione dei sintomi|Symptombeginn und Verlauf|Início e evolução dos sintomas|بداية الأعراض وتطورها
+chest_pain|Dolor torácico|Chest pain|Douleur thoracique|Dolore toracico|Brustschmerz|Dor torácica|ألم الصدر
+dyspnea|Disnea|Dyspnoea|Dyspnée|Dispnea|Dyspnoe|Dispneia|ضيق النفس
+palpitations|Palpitaciones|Palpitations|Palpitations|Palpitazioni|Palpitationen|Palpitações|خفقان
+syncope|Síncope|Syncope|Syncope|Sincope|Synkope|Síncope|إغماء
+medical_history|Antecedentes cardiovasculares y generales|Cardiovascular and general history|Antécédents cardiovasculaires et généraux|Anamnesi cardiovascolare e generale|Kardiovaskuläre und allgemeine Anamnese|Antecedentes cardiovasculares e gerais|السوابق القلبية الوعائية والعامة
+dyslipidemia|Dislipemia|Dyslipidaemia|Dyslipidémie|Dislipidemia|Dyslipidämie|Dislipidemia|اضطراب الدهون
+family_history|Antecedentes familiares cardiovasculares|Family cardiovascular history|Antécédents familiaux cardiovasculaires|Familiarità cardiovascolare|Familiäre kardiovaskuläre Anamnese|Antecedentes familiares cardiovasculares|سوابق قلبية وعائية عائلية
+medication|Medicación y tratamientos actuales|Current medication and treatment|Médicaments et traitements actuels|Farmaci e terapie attuali|Aktuelle Medikamente und Behandlung|Medicação e tratamentos atuais|الأدوية والعلاجات الحالية
+allergies|Alergias: describir o indicar ausencia conocida|Allergies: describe or state known absence|Allergies : décrire ou indiquer l'absence connue|Allergie: descrivi o indica assenza nota|Allergien: beschreiben oder bekannte Abwesenheit angeben|Alergias: descrever ou indicar ausência conhecida|الحساسية: صفها أو اذكر غيابها المعروف
+dbp|Presión diastólica (mmHg)|Diastolic BP (mmHg)|Pression diastolique (mmHg)|Pressione diastolica (mmHg)|Diastolischer Blutdruck (mmHg)|Pressão diastólica (mmHg)|الضغط الانبساطي (mmHg)
+oxygen|Saturación de oxígeno (%)|Oxygen saturation (%)|Saturation en oxygène (%)|Saturazione di ossigeno (%)|Sauerstoffsättigung (%)|Saturação de oxigênio (%)|إشباع الأكسجين (%)
+temperature|Temperatura (°C)|Temperature (°C)|Température (°C)|Temperatura (°C)|Temperatur (°C)|Temperatura (°C)|الحرارة (°C)
+physical_exam|Hallazgos del examen físico|Physical examination findings|Résultats de l'examen clinique|Reperti dell'esame obiettivo|Befunde der körperlichen Untersuchung|Achados do exame físico|نتائج الفحص السريري
+laboratory_notes|Resultados de laboratorio: unidades, referencia y fecha|Laboratory results: units, reference range and date|Résultats biologiques : unités, référence et date|Risultati di laboratorio: unità, riferimento e data|Laborergebnisse: Einheiten, Referenzbereich und Datum|Resultados laboratoriais: unidades, referência e data|نتائج المختبر: الوحدات والمرجع والتاريخ
+ecg_notes|Hallazgos de ECG documentados por el médico|ECG findings documented by clinician|Résultats ECG documentés par le médecin|Reperti ECG documentati dal medico|Ärztlich dokumentierte EKG-Befunde|Achados de ECG documentados pelo médico|نتائج التخطيط الموثقة من الطبيب
+echo_notes|Hallazgos de ecocardiograma: fecha y fuente|Echocardiography findings: date and source|Résultats d'échocardiographie : date et source|Reperti ecocardiografici: data e fonte|Echokardiographiebefunde: Datum und Quelle|Achados de ecocardiograma: data e fonte|نتائج الإيكو: التاريخ والمصدر
+other_studies|Otros estudios: fecha y fuente|Other investigations: date and source|Autres examens : date et source|Altri esami: data e fonte|Weitere Untersuchungen: Datum und Quelle|Outros exames: data e fonte|فحوص أخرى: التاريخ والمصدر
+clinical_notes|Texto clínico libre (sin procesamiento automático)|Free clinical text (no automatic processing)|Texte clinique libre (sans traitement automatique)|Testo clinico libero (senza elaborazione automatica)|Klinischer Freitext (ohne automatische Verarbeitung)|Texto clínico livre (sem processamento automático)|نص سريري حر (دون معالجة آلية)
+'''
+for row in _STAGE1_CATALOG.strip().splitlines():
+    key, *values = row.split('|')
+    if len(values) != len(LANGUAGES) or any(not x.strip() for x in values):
+        raise ValueError(f'Incomplete translation: {key}')
+    for lang, value in zip(LANGUAGES, values):
+        if key in translations[lang]:
+            raise ValueError(f'Duplicate translation: {key}')
+        translations[lang][key] = value

@@ -3,6 +3,7 @@ from datetime import datetime, timezone
 from io import BytesIO
 from pathlib import Path
 import re
+import json
 import threading
 from xml.sax.saxutils import escape
 
@@ -16,6 +17,7 @@ from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Flowable, Image
 from pypdf import PdfReader, PdfWriter
+from access import Feature, require
 
 ROOT = Path(__file__).resolve().parent
 _FONT_LOCK = threading.Lock()
@@ -75,13 +77,18 @@ class RTLText(Flowable):
             self.canv.drawRightString(self.width, self.height - (i + 1) * self.leading + 3, line)
 
 
-def make_report(title, inputs, results, note, sources, t):
+def make_report(title, inputs, results, note, sources, t, *, context=None):
+    require(context, Feature.PDF)
     return dict(title=title, inputs=list(inputs), results=list(results), note=note,
                 sources=list(sources), lang=t['_lang'],
+                owner=context.subject, template_version='1.1', report_version=1,
                 generated_at=datetime.now(timezone.utc).isoformat(timespec='seconds'))
 
 
-def generate_pdf(report, t):
+def generate_pdf(report, t, *, context=None):
+    require(context, Feature.PDF)
+    if report.get('owner') != context.subject:
+        raise PermissionError('report_owner')
     register_fonts()
     buffer = BytesIO()
     normal = ParagraphStyle('CardioBody', fontName='Cardio', fontSize=10, leading=15,
@@ -135,6 +142,9 @@ def generate_pdf(report, t):
     def decorate(canvas, doc):
         canvas.saveState()
         canvas.setTitle(report['title']); canvas.setAuthor('CardioApp')
+        canvas.setSubject(json.dumps({key: report[key] for key in
+            ['template_version', 'report_version', 'algorithm_id', 'algorithm_version', 'input_hash']
+            if key in report}, sort_keys=True))
         logo = ROOT / 'logo.png'
         if logo.exists():
             canvas.drawImage(ImageReader(str(logo)), 42, doc.pagesize[1] - 66,
