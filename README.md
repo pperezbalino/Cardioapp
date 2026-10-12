@@ -4,6 +4,10 @@ A Streamlit reference application for cardiovascular scores, adult renal functio
 
 The recovered logo and the three main sections (scores, infusions and ECG) are preserved. All controls and report text have Spanish, English, French, Italian, German, Portuguese and Arabic catalogues. Model names, citations, mathematical notation and units retain their conventional forms.
 
+## Free and Pro pilot
+
+Free is the default: independent calculators, without advertising or report generation. Pro pilot access adds shared emergency/outpatient intake and PDF/manual ECG reports. The target Pro price is US$5.99/month; no billing or AI is active. Access is verified by server-configured invitations, not a browser plan selector. See [STAGE1.md](STAGE1.md) for scope, data semantics and invitation configuration.
+
 ## Run locally
 
 ```bash
@@ -23,8 +27,9 @@ Use Python 3.11 or 3.12. No API key is required and no external AI service is ca
 - Adult race-free CKD-EPI creatinine 2021.
 - Adult BMI.
 - Conversion of a prescribed infusion dose and actual final dilution to mL/h.
-- Manual ECG reports with validated image/PDF uploads and an embedded original file.
-- PDF downloads for every calculator and manual ECG report, including inputs, units, sources and UTC time.
+- Pro: manual ECG reports with validated image/PDF uploads and an embedded original file.
+- Pro: PDF downloads for every calculator and manual ECG report, including inputs, units, sources, UTC time and version metadata.
+- Pro: shared adult clinical case for emergency/outpatient forms, with unknown/present/absent states, provenance, explicit review and session-local revisions.
 
 HAS-BLED and STS are not implemented. Automatic ECG interpretation is not implemented. The app does not claim otherwise.
 
@@ -40,13 +45,15 @@ Tests cover source-based numeric fixtures, original failure cases, boundaries an
 ## Project layout
 
 - `calculations.py`: model arithmetic, independent of Streamlit and language.
+- `access.py` / `access_ui.py`: server-issued pilot entitlements and access controls.
+- `clinical_case.py` / `case_ui.py`: versioned shared clinical data and the two intake modes.
 - `clinical_ui.py`: translated calculator controls and report lifecycle.
 - `tools/`: screen entry points and manual ECG upload handling.
 - `translations.py`: complete seven-language catalogue; missing translations fail visibly.
 - `pdf_utils.py`: in-memory reports with embedded Unicode fonts and Arabic shaping.
 - `tests/`: calculation, interface, report and upload tests.
 
-There is one implementation of each model; the conflicting old copies at the repository root have been removed. Results and PDF downloads persist across reruns, and are invalidated when their inputs or language change.
+There is one implementation of each model; the conflicting old copies at the repository root have been removed. Numerical results and Pro PDF downloads persist across reruns, and are invalidated when their inputs or language change. Shared case drafts survive navigation and language changes; closing/revoking Pro access or starting a new case clears clinical session data.
 
 ## Use and data
 

@@ -1,10 +1,14 @@
 """Shared translated widgets, result lifecycle and PDF downloads."""
 import hashlib
 import json
+from datetime import datetime, timezone
 import streamlit as st
 
 import calculations as calc
 from pdf_utils import make_report, generate_pdf
+from access import Feature, allows, current_access, require
+
+ALGORITHM_VERSION = '2026.10.11'
 
 SOURCES = {
     'framingham': ['Framingham ATP III (2001), hard CHD point tables: https://www.framinghamheartstudy.org/fhs-for-researchers/fhs-risk-functions/hard-coronary-heart-disease-10-year-risk/'],
@@ -80,31 +84,61 @@ def source_panel(module, t):
 
 
 def submit_result(module, values, inputs, results, t, note=None):
-    report = make_report(t[module], inputs, results,
-                         note or t.get(NOTES.get(module), t['pdf_disclaimer']), SOURCES[module], t)
-    st.session_state[f'report:{module}'] = {
-        'fingerprint': fingerprint(values, t), 'report': report, 'pdf': generate_pdf(report, t)}
+    context = current_access()
+    require(context, Feature.CALCULATORS)
+    # Free creates only a numerical result record, never a clinical report or PDF.
+    st.session_state[f'calculation:{module}'] = {
+        'fingerprint': fingerprint(values, t), 'module': module, 'owner': context.subject,
+        'inputs': inputs, 'results': results,
+        'note': note or t.get(NOTES.get(module), t['pdf_disclaimer']),
+        'algorithm_id': module, 'algorithm_version': ALGORITHM_VERSION,
+        'computed_at': datetime.now(timezone.utc).isoformat(timespec='seconds')}
+
+
+def calculation_pdf(context, saved, t):
+    require(context, Feature.PDF)
+    if saved['owner'] != context.subject:
+        raise PermissionError('report_owner')
+    module = saved['module']
+    report = make_report(t[module], saved['inputs'], saved['results'], saved['note'],
+                         SOURCES[module], t, context=context)
+    report['algorithm_id'] = saved['algorithm_id']
+    report['algorithm_version'] = saved['algorithm_version']
+    report['input_hash'] = saved['fingerprint']
+    return report, generate_pdf(report, t, context=context)
 
 
 def show_result(module, values, t):
-    saved = st.session_state.get(f'report:{module}')
+    context = current_access()
+    is_ecg = module == 'ecg'
+    cache_key = f'report:{module}' if is_ecg else f'calculation:{module}'
+    if is_ecg:
+        require(context, Feature.MANUAL_ECG)
+    saved = st.session_state.get(cache_key)
     if not saved:
         return
+    owner = saved['report']['owner'] if is_ecg else saved['owner']
+    if owner != context.subject:
+        del st.session_state[cache_key]
+        return
     if saved['fingerprint'] != fingerprint(values, t):
-        del st.session_state[f'report:{module}']
+        del st.session_state[cache_key]
         st.info(t['recalculate'])
         return
-    report = saved['report']
     st.subheader(t['result'])
-    for label, value in report['results']:
-        if module == 'ecg':
+    results = saved['report']['results'] if is_ecg else saved['results']
+    for label, value in results:
+        if is_ecg:
             # Clinician-authored text must not become executable HTML or remote image markdown.
             st.text(f'{label}: {value}')
         else:
             st.success(f'{label}: {value}')
-    st.download_button(t['download_pdf'], data=saved['pdf'],
-                       file_name=f'CardioApp_{module}.pdf', mime='application/pdf',
-                       key=f'download:{module}')
+    if allows(context, Feature.PDF):
+        if not is_ecg and 'pdf' not in saved:
+            saved['report'], saved['pdf'] = calculation_pdf(context, saved, t)
+        st.download_button(t['download_pdf'], data=saved['pdf'],
+                           file_name=f'CardioApp_{module}.pdf', mime='application/pdf',
+                           key=f'download:{module}')
 
 
 def render_score(module, t):
@@ -187,7 +221,7 @@ def render_score(module, t):
                 results = [(t['bmi'], f'{value:.1f} kg/m²'), (t['category'], t[category])]
             submit_result(module, values, fields.inputs, results, t)
         except ValueError as error:
-            st.session_state.pop(f'report:{module}', None)
+            st.session_state.pop(f'calculation:{module}', None)
             st.error(t['framingham_ineligible'] if str(error) == 'framingham_ineligible' else t['invalid_input'])
     show_result(module, fields.values, t)
     source_panel(module, t)
@@ -213,7 +247,7 @@ def render_drugs(t):
                        (t['total_dose'], f"{result['mg_min']:.6g} mg/min")]
             submit_result('drugs', fields.values, fields.inputs, results, t)
         except ValueError:
-            st.session_state.pop('report:drugs', None); st.error(t['invalid_input'])
+            st.session_state.pop('calculation:drugs', None); st.error(t['invalid_input'])
     show_result('drugs', fields.values, t)
     # Exact dimensional relationships, translated surrounding labels.
     st.caption('mL/h = (mg/min × 60) / (mg/mL)')

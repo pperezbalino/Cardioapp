@@ -14,12 +14,16 @@ from translations import LANGUAGES, translations
 ROOT = Path(__file__).resolve().parents[1]
 
 
-def start_app(lang='es'):
+def start_app(lang='es', pro=True):
     app = AppTest.from_file(str(ROOT / 'app.py'), default_timeout=15).run()
     assert not app.exception
     app.selectbox(key='language').set_value(lang).run()
     app.button(key='accept_disclaimer').click().run()
     assert not app.exception
+    if pro:
+        app.text_input(key='access:code').set_value('test-only-cardioapp-pro-invite-0001').run()
+        app.button(key='access:login').click().run()
+        assert not app.exception
     return app
 
 
@@ -33,7 +37,7 @@ def test_all_calculator_screens_and_pdfs(lang):
         app.button(key=f'calculate:{module}').click().run()
         assert not app.exception, (lang, module)
         assert app.success
-        saved = app.session_state[f'report:{module}']
+        saved = app.session_state[f'calculation:{module}']
         reader = PdfReader(BytesIO(saved['pdf']))
         assert len(reader.pages) >= 1
         assert saved['report']['lang'] == lang
@@ -45,22 +49,22 @@ def test_all_calculator_screens_and_pdfs(lang):
 def test_report_persists_and_is_invalidated_on_input_and_language_change():
     app = start_app()
     app.button(key='calculate:framingham').click().run()
-    original = app.session_state['report:framingham']['pdf']
+    original = app.session_state['calculation:framingham']['pdf']
     app.run()
-    assert app.session_state['report:framingham']['pdf'] == original
+    assert app.session_state['calculation:framingham']['pdf'] == original
     app.number_input(key='framingham:age').set_value(65).run()
-    assert 'report:framingham' not in app.session_state
+    assert 'calculation:framingham' not in app.session_state
     assert not app.success
     app.button(key='calculate:framingham').click().run()
     app.selectbox(key='language').set_value('en').run()
-    assert 'report:framingham' not in app.session_state
+    assert 'calculation:framingham' not in app.session_state
     app.button(key='calculate:framingham').click().run()
-    assert app.session_state['report:framingham']['report']['lang'] == 'en'
+    assert app.session_state['calculation:framingham']['report']['lang'] == 'en'
     app.selectbox(key='score').set_value('bmi').run()
     app.selectbox(key='score').set_value('framingham').run()
     # Streamlit may reset hidden widgets; any changed values must invalidate old reports.
-    if 'report:framingham' in app.session_state:
-        assert app.session_state['report:framingham']['report']['inputs'][0][1] == str(app.number_input(key='framingham:age').value)
+    if 'calculation:framingham' in app.session_state:
+        assert app.session_state['calculation:framingham']['report']['inputs'][0][1] == str(app.number_input(key='framingham:age').value)
 
 
 def test_framingham_exclusion_and_sex_only_af_in_ui():
@@ -89,8 +93,8 @@ def test_drug_and_ecg_validation_in_all_languages(lang):
     app.number_input(key='drugs:final_ml').set_value(250.0).run()
     app.button(key='calculate:drugs').click().run()
     assert not app.exception
-    assert app.session_state['report:drugs']['report']['results'][0][1] == '15 mL/h'
-    assert all('weight' not in str(x) for x in app.session_state['report:drugs']['report']['inputs'])
+    assert app.session_state['calculation:drugs']['report']['results'][0][1] == '15 mL/h'
+    assert all('weight' not in str(x) for x in app.session_state['calculation:drugs']['report']['inputs'])
     app.button(key='calculate:ecg').click().run()
     assert not app.exception
     assert translations[lang]['ecg_required'] in [x.value for x in app.error]
@@ -105,24 +109,24 @@ def png_bytes():
 
 @pytest.mark.parametrize('data,name', [(b'', 'empty.png'), (b'not an image', 'fake.png'),
                                        (b'not a PDF', 'fake.pdf'), (b'junk', 'file.exe')])
-def test_invalid_ecg_files_never_generate_diagnosis(data, name):
+def test_invalid_ecg_files_never_generate_diagnosis(data, name, pro_context):
     with pytest.raises(ValueError, match='invalid_file'):
-        manual_report(data, name, 'AB', '123', 'test', True, translations['es'])
+        manual_report(data, name, 'AB', '123', 'test', True, translations['es'], context=pro_context)
 
 
-def test_manual_ecg_requires_author_and_confirmation():
+def test_manual_ecg_requires_author_and_confirmation(pro_context):
     data = png_bytes()
     for fields in [('', '123', 'Written findings', True), ('AB', '', 'Written findings', True),
                    ('AB','123','',True), ('AB','123','Written findings',False)]:
         with pytest.raises(ValueError, match='ecg_required'):
-            manual_report(data, 'trace.png', *fields, translations['es'])
+            manual_report(data, 'trace.png', *fields, translations['es'], context=pro_context)
 
 
 @pytest.mark.parametrize('lang', LANGUAGES)
-def test_ecg_report_embeds_original_and_only_authored_findings(lang):
+def test_ecg_report_embeds_original_and_only_authored_findings(lang, pro_context):
     data = png_bytes()
-    report = manual_report(data, 'trace.png', 'AB', '123', 'TEST: clinician authored findings <>&', True, translations[lang])
-    pdf = generate_pdf(report, translations[lang])
+    report = manual_report(data, 'trace.png', 'AB', '123', 'TEST: clinician authored findings <>&', True, translations[lang], context=pro_context)
+    pdf = generate_pdf(report, translations[lang], context=pro_context)
     reader = PdfReader(BytesIO(pdf))
     assert reader.attachments['trace.png'][0] == data
     assert hashlib.sha256(data).hexdigest() == report['inputs'][3][1]
@@ -135,24 +139,24 @@ def test_ecg_report_embeds_original_and_only_authored_findings(lang):
         assert translations[lang]['manual_status'] in text
 
 
-def test_pdf_ecg_upload_and_attachment_and_encryption():
+def test_pdf_ecg_upload_and_attachment_and_encryption(pro_context):
     writer = PdfWriter(); writer.add_blank_page(width=600,height=300)
     output = BytesIO(); writer.write(output); original = output.getvalue()
     assert validate_upload(original, 'trace.pdf')['pages'] == 1
-    report = manual_report(original, 'trace.pdf', 'AB','123','Written interpretation',True,translations['es'])
-    result = PdfReader(BytesIO(generate_pdf(report, translations['es'])))
+    report = manual_report(original, 'trace.pdf', 'AB','123','Written interpretation',True,translations['es'], context=pro_context)
+    result = PdfReader(BytesIO(generate_pdf(report, translations['es'], context=pro_context)))
     assert result.attachments['trace.pdf'][0] == original
     writer.encrypt('password'); encrypted = BytesIO(); writer.write(encrypted)
     with pytest.raises(ValueError): validate_upload(encrypted.getvalue(), 'encrypted.pdf')
 
 
 @pytest.mark.parametrize('lang', LANGUAGES)
-def test_unicode_long_reports_paginate_without_losing_text(lang):
+def test_unicode_long_reports_paginate_without_losing_text(lang, pro_context):
     t = translations[lang]
     text = (t['ecg_note'] + ' ') * 100
     report = make_report(t['ecg'], [(t['patient_initials'],'AB')], [(t['findings'],text)],
-                         t['ecg_note'], [t['manual_status']], t)
-    pdf = generate_pdf(report, t)
+                         t['ecg_note'], [t['manual_status']], t, context=pro_context)
+    pdf = generate_pdf(report, t, context=pro_context)
     reader = PdfReader(BytesIO(pdf))
     assert 2 <= len(reader.pages) <= 25
     assert all(page.extract_text().strip() for page in reader.pages)
