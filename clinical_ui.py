@@ -11,6 +11,7 @@ from access import Feature, allows, current_access, require
 ALGORITHM_VERSION = '2026.10.11'
 
 from clinical_sources import SOURCES, NOTES
+from drug_references import get_reference, profiles, reference_rates, outside_reference, VERSION as DRUG_REFERENCE_VERSION, PRO_DRUGS
 
 
 def fingerprint(values, t):
@@ -70,6 +71,8 @@ def source_panel(module, t):
 def submit_result(module, values, inputs, results, t, note=None):
     context = current_access()
     require(context, Feature.CALCULATORS)
+    if module == 'drugs' and ('drug_context' in values or 'reference_version' in values):
+        require(context, Feature.DOSE_REFERENCE)
     # Free creates only a numerical result record, never a clinical report or PDF.
     st.session_state[f'calculation:{module}'] = {
         'fingerprint': fingerprint(values, t), 'module': module, 'owner': context.subject,
@@ -89,6 +92,11 @@ def calculation_pdf(context, saved, t):
     report['algorithm_id'] = saved['algorithm_id']
     report['algorithm_version'] = saved['algorithm_version']
     report['input_hash'] = saved['fingerprint']
+    if module == 'drugs' and 'reference_profile_id' in saved:
+        require(context, Feature.DOSE_REFERENCE)
+        report['sources'].append(saved['reference_source'])
+        report['drug_reference_id'] = saved['reference_profile_id']
+        report['drug_reference_version'] = saved['reference_version']
     return report, generate_pdf(report, t, context=context)
 
 
@@ -212,10 +220,32 @@ def render_score(module, t):
 
 
 def render_drugs(t):
-    st.subheader(t['drugs']); st.caption(t['infusion_note'])
+    context = current_access()
+    pro = allows(context, Feature.DOSE_REFERENCE)
+    st.subheader(t['drugs'])
+    st.caption(t['pro_infusion_note'] if pro else t['infusion_note'])
     fields = Fields('drugs', t)
-    drug = fields.select('select_drug', list(calc.DRUG_UNITS), lambda x: x)
-    unit = calc.DRUG_UNITS[drug]
+    drug = fields.select('select_drug', list(PRO_DRUGS if pro else calc.DRUG_UNITS), lambda x: x)
+    reference = None
+    unit = calc.DRUG_UNITS.get(drug)
+    if pro:
+        profile_ids = profiles(drug, context=context)
+        profile_labels = {pid: t[get_reference(drug,pid,context=context).context_key] for pid in profile_ids}
+        profile_id = st.selectbox(t['drug_context'], profile_ids,
+            format_func=lambda pid: profile_labels[pid], key='drugs:drug_context:'+drug)
+        fields.add('drug_context', profile_id, t['drug_context'], profile_labels[profile_id])
+        reference = get_reference(drug,profile_id,context=context)
+        unit = reference.unit
+        st.info(t['drug_reference'] + ': ' + (f'{reference.low:g}' if reference.high in (None,reference.low)
+            else f'{reference.low:g}–{reference.high:g}') + ' ' + unit)
+        if reference.kind == 'start': st.caption(t['drug_start_only'])
+        st.caption(t[reference.note_key])
+        if drug == 'nitroglycerin': st.caption(t['ntg_reference'])
+        st.caption(reference.source)
+        previous = st.session_state.get('drugs:active_profile')
+        if previous is not None and previous != profile_id:
+            st.session_state[f'drugs:dose:{drug}'] = 0.0
+        st.session_state['drugs:active_profile'] = profile_id
     weight = fields.number('weight', 0.1, 500.0, 70.0, 0.1) if unit == 'mcg/kg/min' else None
     dose = st.number_input(f"{t['dose']} ({unit})", min_value=0.0, max_value=100000.0,
                            value=0.0, step=0.01, format='%.6f', key=f'drugs:dose:{drug}')
@@ -223,15 +253,33 @@ def render_drugs(t):
     amount = fields.number('total_mg', 0.0, 100000.0, 0.0, 0.1)
     volume = fields.number('final_ml', 0.0, 100000.0, 0.0, 1.0)
     fields.values['unit'] = unit
+    if reference:
+        fields.values['reference_version'] = DRUG_REFERENCE_VERSION
+        fields.inputs.append((t['drug_reference'], f'{reference.low:g}' +
+            (f'–{reference.high:g}' if reference.high is not None and reference.high != reference.low else '') + ' ' + unit))
+        fields.inputs.append((t['references'], reference.source))
+        if dose > 0 and outside_reference(reference, dose, context=context):
+            st.warning(t['drug_outside_reference'])
     if st.button(t['calculate'], key='calculate:drugs'):
         try:
             result = calc.infusion(dose, unit, amount, volume, weight)
             results = [(t['pump_rate'], f"{result['ml_h']:.4g} mL/h"),
                        (t['concentration'], f"{result['mg_ml']:.6g} mg/mL"),
                        (t['total_dose'], f"{result['mg_min']:.6g} mg/min")]
-            submit_result('drugs', fields.values, fields.inputs, results, t)
+            note = t['infusion_note']
+            if reference:
+                rates = reference_rates(reference, amount, volume, weight, context=context)
+                reference_rate = f"{rates['reference_low_ml_h']:.4g}"
+                if 'reference_high_ml_h' in rates:
+                    reference_rate += f"–{rates['reference_high_ml_h']:.4g}"
+                results.append((t['drug_reference_rate'], reference_rate+' mL/h'))
+                note = t['pro_infusion_note'] + ' ' + t[reference.note_key]
+                if outside_reference(reference, dose, context=context): note += ' ' + t['drug_outside_reference']
+            submit_result('drugs', fields.values, fields.inputs, results, t, note=note)
+            if reference:
+                st.session_state['calculation:drugs'].update(reference_profile_id=reference.profile_id,
+                    reference_version=DRUG_REFERENCE_VERSION, reference_source=reference.source)
         except ValueError:
             st.session_state.pop('calculation:drugs', None); st.error(t['invalid_input'])
     show_result('drugs', fields.values, t)
-    # Exact dimensional relationships, translated surrounding labels.
     st.caption('mL/h = (mg/min × 60) / (mg/mL)')

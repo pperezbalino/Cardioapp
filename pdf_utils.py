@@ -152,7 +152,7 @@ def generate_pdf(report, t, *, context=None):
         canvas.setTitle(report['title']); canvas.setAuthor('CardioApp')
         canvas.setSubject(json.dumps({key: report[key] for key in
             ['template_version', 'report_version', 'algorithm_id', 'algorithm_version', 'input_hash', 'case_id', 'case_revision',
-             'review_hash', 'reviewed_by', 'reviewed_at', 'pathway_id', 'pathway_version']
+             'review_hash', 'reviewed_by', 'reviewed_at', 'pathway_id', 'pathway_version', 'drug_reference_id', 'drug_reference_version']
             if key in report}, sort_keys=True))
         logo = ROOT / 'logo.png'
         if logo.exists():

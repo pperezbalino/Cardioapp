@@ -47,6 +47,7 @@ Tests cover source-based numeric fixtures, original failure cases, boundaries an
 - `calculations.py`: model arithmetic, independent of Streamlit and language.
 - `access.py` / `access_ui.py`: server-issued pilot entitlements and access controls.
 - `clinical_case.py` / `case_ui.py`: versioned shared clinical data and the two intake modes.
+- `drug_references.py`: Pro-only adult dose references; Free retains prescribed-dose/dilution conversion. See [DRUG_REFERENCES.md](DRUG_REFERENCES.md).
 - `acs_pathways.py`: distinct clinician-selected STEMI/NSTE-ACS reference therapeutic routes, with ESC 2023 rules and AHA/ACC 2025 comparison notes.
 - `integrated_engine.py`: confirmed-case score adapters and a limited consistency rule set.
 - `case_reports.py` / `integrated_ui.py`: editable local drafts, separate physician review and guarded export.

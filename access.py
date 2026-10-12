@@ -16,6 +16,7 @@ class Feature(str, Enum):
     CLINICAL_CASE = 'clinical_case'
     PDF = 'pdf'
     MANUAL_ECG = 'manual_ecg'
+    DOSE_REFERENCE = 'dose_reference'
     AI = 'ai'
     VOICE = 'voice'
     HISTORY = 'history'
@@ -26,7 +27,7 @@ ACCESS_LIFETIME_SECONDS = 8 * 60 * 60
 _SIGNING_KEY = secrets.token_bytes(32)
 _PERMISSIONS = {
     'free': frozenset({Feature.CALCULATORS}),
-    'pro': frozenset({Feature.CALCULATORS, Feature.CLINICAL_CASE, Feature.PDF, Feature.MANUAL_ECG}),
+    'pro': frozenset({Feature.CALCULATORS, Feature.CLINICAL_CASE, Feature.PDF, Feature.MANUAL_ECG, Feature.DOSE_REFERENCE}),
 }
 
 
