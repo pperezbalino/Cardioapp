@@ -1,44 +1,57 @@
 # CardioApp
 
-**CardioApp** is an educational application designed for cardiovascular risk evaluation, clinical score calculation, emergency drug dosing, and AI-assisted ECG interpretation.
+A Streamlit reference application for cardiovascular scores, adult renal function and BMI, prescribed infusion conversion, and clinician-authored ECG reports.
 
-> ⚠️ This application is intended for educational use only and does not replace professional medical judgment.
+The recovered logo and the three main sections (scores, infusions and ECG) are preserved. All controls and report text have Spanish, English, French, Italian, German, Portuguese and Arabic catalogues. Model names, citations, mathematical notation and units retain their conventional forms.
 
-## Features
-
-- Framingham Risk Score (with prevention recommendations)
-- EuroSCORE II
-- CHA₂DS₂–VASc Score
-- HAS-BLED Score
-- GRACE Score
-- TIMI Score
-- BMI Calculator
-- CKD-EPI (eGFR calculation)
-- Emergency Drug Infusion Calculator
-- ECG interpretation from image or PDF via AI
-- Multi-language support (Spanish, English, French, Italian, Portuguese, German, Arabic)
-- Custom disclaimer per language on first use
-
-## How to Run
-
-You can run this app via Streamlit:
+## Run locally
 
 ```bash
-streamlit run app.py
+python -m pip install -r requirements.txt
+python -m streamlit run app.py
 ```
 
-Ensure the following files are present in the same directory:
+Use Python 3.11 or 3.12. No API key is required and no external AI service is called. Streamlit Cloud should use `app.py` as the entry point. Embedded DejaVu fonts and their licence are in `assets/fonts/`.
 
-- `app.py` – Main application file
-- `logo.png` – App icon
-- `tools/` – Folder containing the individual score modules and calculators
+## Implemented tools
 
-## Contact
+- Framingham ATP III hard coronary heart disease risk, with applicability restrictions.
+- Complete EuroSCORE II model, including Cockcroft-Gault renal clearance.
+- CHA₂DS₂-VASc, with named ACC/AHA 2023 interpretation and an ESC 2024 model note.
+- Original GRACE in-hospital point nomogram.
+- Seven-variable TIMI UA/NSTEMI and the 14-day combined endpoint.
+- Adult race-free CKD-EPI creatinine 2021.
+- Adult BMI.
+- Conversion of a prescribed infusion dose and actual final dilution to mL/h.
+- Manual ECG reports with validated image/PDF uploads and an embedded original file.
+- PDF downloads for every calculator and manual ECG report, including inputs, units, sources and UTC time.
 
-For feedback, bug reports, or suggestions, contact:  
-**Pablo Pérez Baliño**  
-📧 pperezbalino@gmail.com
+HAS-BLED and STS are not implemented. Automatic ECG interpretation is not implemented. The app does not claim otherwise.
 
----
+## Verification
 
-© 2025 CardioApp. All rights reserved.
+```bash
+python -m pip install -r requirements-dev.txt
+python -m pytest -q
+```
+
+Tests cover source-based numeric fixtures, original failure cases, boundaries and invalid input, seven-language UI execution, stale-result invalidation, PDF pagination and Unicode, and ECG validation/attachments. [SOURCES.md](SOURCES.md) documents the precise models, publications, applicability and worked examples. Code-level verification does not establish clinical validation in patients.
+
+## Project layout
+
+- `calculations.py`: model arithmetic, independent of Streamlit and language.
+- `clinical_ui.py`: translated calculator controls and report lifecycle.
+- `tools/`: screen entry points and manual ECG upload handling.
+- `translations.py`: complete seven-language catalogue; missing translations fail visibly.
+- `pdf_utils.py`: in-memory reports with embedded Unicode fonts and Arabic shaping.
+- `tests/`: calculation, interface, report and upload tests.
+
+There is one implementation of each model; the conflicting old copies at the repository root have been removed. Results and PDF downloads persist across reruns, and are invalidated when their inputs or language change.
+
+## Use and data
+
+Reference results require professional review and do not replace clinical judgement. Infusion results are unit conversions, not prescriptions. Historical models are identified by name and year. Before use in patient care, review the definitions and applicability of each model.
+
+The app itself does not send patient uploads to an AI service or deliberately persist them on disk. Hosting and session access must still be appropriate for the data entered. Use initials rather than full patient names.
+
+Pablo Pérez Baliño · © 2025-2026 CardioApp

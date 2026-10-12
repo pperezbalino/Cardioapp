@@ -1,54 +1,162 @@
+"""In-memory multilingual PDF reports; no patient-named files on disk."""
+from datetime import datetime, timezone
+from io import BytesIO
+from pathlib import Path
+import re
+import threading
+from xml.sax.saxutils import escape
 
-from fpdf import FPDF
-import base64
-import streamlit as st
-import os
+import arabic_reshaper
+from bidi.algorithm import get_display
+from reportlab.lib import colors
+from reportlab.lib.enums import TA_RIGHT
+from reportlab.lib.styles import ParagraphStyle
+from reportlab.lib.utils import ImageReader
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Flowable, Image
+from pypdf import PdfReader, PdfWriter
 
-class PDF(FPDF):
-    def __init__(self, logo_path, lang_data, ecg_image_path=None):
+ROOT = Path(__file__).resolve().parent
+_FONT_LOCK = threading.Lock()
+
+
+def register_fonts():
+    with _FONT_LOCK:
+        if 'Cardio' not in pdfmetrics.getRegisteredFontNames():
+            pdfmetrics.registerFont(TTFont('Cardio', str(ROOT / 'assets/fonts/DejaVuSans.ttf')))
+            pdfmetrics.registerFont(TTFont('CardioBold', str(ROOT / 'assets/fonts/DejaVuSans-Bold.ttf')))
+            pdfmetrics.registerFontFamily('Cardio', normal='Cardio', bold='CardioBold',
+                                        italic='Cardio', boldItalic='CardioBold')
+
+
+def visual(text):
+    # Isolate scientific notation/Latin runs: inequalities, percentages, dates and units
+    # must keep their left-to-right order inside otherwise right-to-left text.
+    text = re.sub(r'[<>≤≥≈]?[A-Za-z0-9][A-Za-z0-9<>≤≥≈%/.:+_\-²₂]*(?:[ \t]+[<>≤≥≈]?[A-Za-z0-9][A-Za-z0-9<>≤≥≈%/.:+_\-²₂]*)*',
+                  lambda match: '\u202a' + match.group(0) + '\u202c', text)
+    return get_display(arabic_reshaper.reshape(text))
+
+
+class RTLText(Flowable):
+    """Wrap logical text first, then shape and reorder each individual line."""
+    def __init__(self, text, size=10, bold=False):
         super().__init__()
-        self.lang_data = lang_data
-        self.logo_path = logo_path
-        self.ecg_image_path = ecg_image_path
+        self.text = text
+        self.size = size
+        self.font = 'CardioBold' if bold else 'Cardio'
+        self.leading = size * 1.5
 
-    def header(self):
-        if self.logo_path and os.path.exists(self.logo_path):
-            self.image(self.logo_path, 10, 8, 20)
-        self.set_font("Arial", "B", 14)
-        self.cell(0, 10, self.lang_data["pdf_title"], ln=True, align="C")
-        self.ln(10)
+    def wrap(self, avail_width, avail_height):
+        self.width = avail_width
+        self.lines = []
+        current = ''
+        for word in self.text.split():
+            candidate = (current + ' ' + word).strip()
+            if pdfmetrics.stringWidth(visual(candidate), self.font, self.size) <= avail_width:
+                current = candidate
+                continue
+            if current:
+                self.lines.append(visual(current)); current = ''
+            for char in word:
+                candidate = current + char
+                if current and pdfmetrics.stringWidth(visual(candidate), self.font, self.size) > avail_width:
+                    self.lines.append(visual(current)); current = char
+                else:
+                    current = candidate
+        if current:
+            self.lines.append(visual(current))
+        self.height = max(1, len(self.lines)) * self.leading
+        return self.width, self.height
 
-    def add_report(self, title, content):
-        self.set_font("Arial", "B", 12)
-        self.cell(0, 10, title, ln=True)
-        self.set_font("Arial", "", 11)
-        for line in content.split("\n"):
-            self.multi_cell(0, 8, line)
-        self.ln()
-        if self.ecg_image_path and os.path.exists(self.ecg_image_path):
-            self.set_font("Arial", "B", 11)
-            self.cell(0, 10, self.lang_data.get("ecg_image_label", "ECG Image:"), ln=True)
-            self.image(self.ecg_image_path, x=None, y=None, w=180)
-            self.ln()
+    def draw(self):
+        self.canv.setFont(self.font, self.size)
+        for i, line in enumerate(self.lines):
+            self.canv.drawRightString(self.width, self.height - (i + 1) * self.leading + 3, line)
 
-    def disclaimer(self):
-        self.set_font("Arial", "I", 9)
-        self.multi_cell(0, 8, self.lang_data["pdf_disclaimer"])
 
-    def output_to_base64(self):
-        pdf_data = self.output(dest="S").encode("latin1")
-        b64_pdf = base64.b64encode(pdf_data).decode("utf-8")
-        return b64_pdf
+def make_report(title, inputs, results, note, sources, t):
+    return dict(title=title, inputs=list(inputs), results=list(results), note=note,
+                sources=list(sources), lang=t['_lang'],
+                generated_at=datetime.now(timezone.utc).isoformat(timespec='seconds'))
 
-def render_pdf_view(title, content, lang_data, logo_path="logo.png", ecg_image_path=None):
-    pdf = PDF(logo_path, lang_data, ecg_image_path)
-    pdf.add_page()
-    pdf.add_report(title, content)
-    pdf.disclaimer()
-    b64_pdf = pdf.output_to_base64()
-    filename = lang_data.get("pdf_filename", "CardioApp_Report.pdf")
-    pdf_display = f"""
-<iframe src="data:application/pdf;base64,{b64_pdf}" width="100%" height="600px" type="application/pdf"></iframe>
-<p><a href="data:application/pdf;base64,{b64_pdf}" download="{filename}">{lang_data.get("download_pdf", "Download PDF")}</a></p>
-"""
-    st.markdown(pdf_display, unsafe_allow_html=True)
+
+def generate_pdf(report, t):
+    register_fonts()
+    buffer = BytesIO()
+    normal = ParagraphStyle('CardioBody', fontName='Cardio', fontSize=10, leading=15,
+                            spaceAfter=7, splitLongWords=True)
+    heading = ParagraphStyle('CardioHeading', parent=normal, fontName='CardioBold',
+                             fontSize=12, leading=17, spaceBefore=10)
+    rtl = t['_lang'] == 'ar'
+    if rtl:
+        normal.alignment = heading.alignment = TA_RIGHT
+
+    def para(text, bold=False):
+        if rtl:
+            return RTLText(str(text), size=12 if bold else 10, bold=bold)
+        return Paragraph(escape(str(text)), heading if bold else normal)
+
+    story = [para(report['title'], True), Spacer(1, 10),
+             para(f"{t['generated_at']}: {report['generated_at']}"), Spacer(1, 8)]
+    for name, items in [(t['inputs'], report['inputs']), (t['result'], report['results'])]:
+        story += [para(name, True), Spacer(1, 8)]
+        for label, value in items:
+            text = f'{label}: {value}'
+            for line in text.splitlines() or ['']:
+                if rtl:
+                    # Small logical chunks remain splittable across pages.
+                    words = line.split(); chunks = []; current = ''
+                    for word in words:
+                        if len(current) + len(word) > 220 and current:
+                            chunks.append(current); current = ''
+                        current = (current + ' ' + word).strip()
+                        while len(current) > 220:
+                            chunks.append(current[:220]); current = current[220:]
+                    if current: chunks.append(current)
+                    for chunk in chunks:
+                        story += [para(chunk), Spacer(1, 3)]
+                else:
+                    story.append(para(line))
+        story.append(Spacer(1, 8))
+    attachment = report.get('attachment')
+    if attachment and not attachment['name'].lower().endswith('.pdf'):
+        image_reader = ImageReader(BytesIO(attachment['data']))
+        width, height = image_reader.getSize()
+        scale = min(490 / width, 550 / height)
+        story += [para(t['attached_file'], True), Spacer(1, 8),
+                  Image(BytesIO(attachment['data']), width=width * scale, height=height * scale),
+                  Spacer(1, 12)]
+    story += [para(report['note']), Spacer(1, 10), para(t['references'], True), Spacer(1, 8)]
+    for source in report['sources']:
+        story += [para(source), Spacer(1, 4)]
+    story += [Spacer(1, 12), para(t['pdf_disclaimer'])]
+
+    def decorate(canvas, doc):
+        canvas.saveState()
+        canvas.setTitle(report['title']); canvas.setAuthor('CardioApp')
+        logo = ROOT / 'logo.png'
+        if logo.exists():
+            canvas.drawImage(ImageReader(str(logo)), 42, doc.pagesize[1] - 66,
+                             width=34, height=34, preserveAspectRatio=True, mask='auto')
+        canvas.setFillColor(colors.HexColor('#174a62')); canvas.setFont('CardioBold', 12)
+        header = visual(t['pdf_title']) if rtl else t['pdf_title']
+        canvas.drawRightString(doc.pagesize[0] - 42, doc.pagesize[1] - 49, header)
+        canvas.setStrokeColor(colors.HexColor('#c4d9e3'))
+        canvas.line(42, doc.pagesize[1] - 75, doc.pagesize[0] - 42, doc.pagesize[1] - 75)
+        canvas.setFont('Cardio', 9)
+        page_label = f"{t['page']} {doc.page}"
+        canvas.drawRightString(doc.pagesize[0] - 42, 27, visual(page_label) if rtl else page_label)
+        canvas.restoreState()
+
+    doc = SimpleDocTemplate(buffer, rightMargin=42, leftMargin=42,
+                            topMargin=90, bottomMargin=45)
+    doc.build(story, onFirstPage=decorate, onLaterPages=decorate)
+    if attachment:
+        writer = PdfWriter()
+        writer.clone_document_from_reader(PdfReader(BytesIO(buffer.getvalue())))
+        writer.add_attachment(attachment['name'], attachment['data'])
+        output = BytesIO()
+        writer.write(output)
+        return output.getvalue()
+    return buffer.getvalue()
