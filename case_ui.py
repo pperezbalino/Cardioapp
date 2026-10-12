@@ -1,4 +1,4 @@
-"""Shared emergency/outpatient intake; no AI or integrated clinical decisions."""
+"""Shared intake and deterministic integrated assessment; no external AI."""
 from itertools import groupby
 import streamlit as st
 
@@ -40,6 +40,10 @@ def render_case(t, mode):
                     options = ['unknown', 'present', 'absent']
                     values[spec.key] = st.selectbox(t[spec.key], options, index=options.index(initial),
                         format_func=lambda x: t['case_'+x], key=key)
+                elif spec.kind == 'acs':
+                    options = ['unknown', 'suspected_acs', 'ua_nstemi', 'not_acs']
+                    values[spec.key] = st.selectbox(t[spec.key], options, index=options.index(initial),
+                        format_func=lambda x: t['case_unknown'] if x == 'unknown' else t[x], key=key)
                 elif spec.kind == 'sex':
                     options = ['unknown', 'M', 'F']
                     values[spec.key] = st.selectbox(t['sex'], options, index=options.index(initial),
@@ -71,3 +75,6 @@ def render_case(t, mode):
             st.error(t['case_invalid'].format(field=t.get(field, t['case_title'])))
     state = 'case_reviewed' if not unsaved and case.review_state == 'reviewed' else 'case_draft'
     st.caption(f"{t['case_version']}: {case.revision} · {t[state]}")
+
+    from integrated_ui import render_integrated
+    render_integrated(context, case, t, unsaved=unsaved)

@@ -48,6 +48,7 @@ class RTLText(Flowable):
         self.size = size
         self.font = 'CardioBold' if bold else 'Cardio'
         self.leading = size * 1.5
+        self.keepWithNext = bold
 
     def wrap(self, avail_width, avail_height):
         self.width = avail_width
@@ -94,7 +95,7 @@ def generate_pdf(report, t, *, context=None):
     normal = ParagraphStyle('CardioBody', fontName='Cardio', fontSize=10, leading=15,
                             spaceAfter=7, splitLongWords=True)
     heading = ParagraphStyle('CardioHeading', parent=normal, fontName='CardioBold',
-                             fontSize=12, leading=17, spaceBefore=10)
+                             fontSize=12, leading=17, spaceBefore=10, keepWithNext=True)
     rtl = t['_lang'] == 'ar'
     if rtl:
         normal.alignment = heading.alignment = TA_RIGHT
@@ -104,10 +105,15 @@ def generate_pdf(report, t, *, context=None):
             return RTLText(str(text), size=12 if bold else 10, bold=bold)
         return Paragraph(escape(str(text)), heading if bold else normal)
 
+    def heading_gap(height):
+        gap = Spacer(1, height)
+        gap.keepWithNext = True
+        return gap
+
     story = [para(report['title'], True), Spacer(1, 10),
-             para(f"{t['generated_at']}: {report['generated_at']}"), Spacer(1, 8)]
+             para(f"{t['generated_at']}: {report['generated_at']}"), heading_gap(8)]
     for name, items in [(t['inputs'], report['inputs']), (t['result'], report['results'])]:
-        story += [para(name, True), Spacer(1, 8)]
+        story += [para(name, True), heading_gap(8)]
         for label, value in items:
             text = f'{label}: {value}'
             for line in text.splitlines() or ['']:
@@ -125,16 +131,16 @@ def generate_pdf(report, t, *, context=None):
                         story += [para(chunk), Spacer(1, 3)]
                 else:
                     story.append(para(line))
-        story.append(Spacer(1, 8))
+        story.append(heading_gap(8))
     attachment = report.get('attachment')
     if attachment and not attachment['name'].lower().endswith('.pdf'):
         image_reader = ImageReader(BytesIO(attachment['data']))
         width, height = image_reader.getSize()
         scale = min(490 / width, 550 / height)
-        story += [para(t['attached_file'], True), Spacer(1, 8),
+        story += [para(t['attached_file'], True), heading_gap(8),
                   Image(BytesIO(attachment['data']), width=width * scale, height=height * scale),
                   Spacer(1, 12)]
-    story += [para(report['note']), Spacer(1, 10), para(t['references'], True), Spacer(1, 8)]
+    story += [para(report['note']), Spacer(1, 10), para(t['references'], True), heading_gap(8)]
     for source in report['sources']:
         story += [para(source), Spacer(1, 4)]
     story += [Spacer(1, 12), para(t['pdf_disclaimer'])]
@@ -143,7 +149,8 @@ def generate_pdf(report, t, *, context=None):
         canvas.saveState()
         canvas.setTitle(report['title']); canvas.setAuthor('CardioApp')
         canvas.setSubject(json.dumps({key: report[key] for key in
-            ['template_version', 'report_version', 'algorithm_id', 'algorithm_version', 'input_hash']
+            ['template_version', 'report_version', 'algorithm_id', 'algorithm_version', 'input_hash', 'case_id', 'case_revision',
+             'review_hash', 'reviewed_by', 'reviewed_at']
             if key in report}, sort_keys=True))
         logo = ROOT / 'logo.png'
         if logo.exists():

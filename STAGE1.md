@@ -1,5 +1,7 @@
 # Stage 1: Free/Pro and the shared clinical case
 
+This file records the stage-1 baseline. The incremental changes in [STAGE2A.md](STAGE2A.md) supersede the original absence of automatic score integration and case reports; external AI remains disabled.
+
 ## Implemented scope
 
 One Streamlit application retains all existing calculator equations. Free is the default and has independent scores and infusion conversions. Free creates only numerical result records; it does not generate clinical reports, PDF bytes or ECG reports. Pro pilot access enables shared clinical intake, calculator PDF export and the existing manual ECG report. Target monthly Pro price is US$5.99; billing is not implemented or activated.
