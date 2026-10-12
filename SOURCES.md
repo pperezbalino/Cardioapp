@@ -38,9 +38,25 @@ The score includes all original variables. Interpretation uses the 2023 ACC/AHA 
 
 DOI: [10.1001/archinte.163.19.2345](https://doi.org/10.1001/archinte.163.19.2345)
 
-This is the original discrete point model, not GRACE 2.0 and not the six-month post-discharge model. Figure 4 supplies all age, heart-rate, systolic-pressure, creatinine and Killip bins, including age ≥90, HR ≥200, SBP 160-199/≥200 and creatinine 2-3.99/≥4. ST deviation includes elevation or depression. The UI displays the score without an invented mortality percentage or a universal treatment/triage category.
+This is the original discrete point model, not GRACE 2.0 and not the six-month post-discharge model. Figure 4 supplies all age, heart-rate, systolic-pressure, creatinine and Killip bins, including age ≥90, HR ≥200, SBP 160-199/≥200 and creatinine 2-3.99/≥4. ST deviation includes elevation or depression. The independent Free calculator and the integrated Pro case display both points and the original Figure 4 hospital-mortality readout. At printed anchors (70, 80, …, 240), the percentage is reproduced. Scores ≤60 show ≤0.2%; scores ≥250 show ≥52%. Intermediate scores show the interval between their two surrounding published anchors, not an interpolated or extrapolated point estimate. For example: 122 points → 1.6–2.1%; 140 points → 2.9%. No universal treatment/triage category is assigned from mortality.
 
 Fixtures: age 65, HR 85, SBP 120, creatinine 1.1, Killip I and positive biomarkers = 58 + 9 + 34 + 7 + 14 = 122. The maximum-point fixture is 372.
+
+## HAS-BLED (independent calculator, added 2026-10-12)
+
+[ESC AF 2020 guideline, Table 10](https://doi.org/10.1093/eurheartj/ehaa612)
+
+[Pisters et al., derivation of HAS-BLED, 2010](https://doi.org/10.1378/chest.10-0134)
+
+[ESC AF 2024 guideline, section 6.7](https://doi.org/10.1093/eurheartj/ehae176)
+
+[ACC/AHA/ACCP/HRS AF 2023 guideline, section 6.1](https://doi.org/10.1161/CIR.0000000000001193)
+
+The explicitly named calculation profile follows ESC 2020 Table 10: uncontrolled SBP >160 mmHg; abnormal renal and hepatic function (one point each); previous stroke; previous major bleeding or predisposition; labile INR/TTR <60% on VKA; age >65 years OR extreme frailty (one point total); concomitant antiplatelets/NSAIDs and clinically relevant alcohol excess/abuse (one each). Maximum 9. Renal dysfunction means dialysis, renal transplant or creatinine >200 µmol/L. Hepatic dysfunction and alcohol excess are physician-assessed under the cited definitions; ESC 2020 cites >14 alcohol units/week as an example, not a universal automatic threshold. No hybrid age/alcohol cutoffs from a different guideline are silently substituted.
+
+The physician confirms AF and assessment of all binary criteria before calculation; an unchecked box is not considered confirmed absence until that acknowledgement. Labile INR is not inferred from a single INR, does not apply to DOACs/no VKA, and is cleared when VKA is deselected. Each renal/liver and drugs/alcohol criterion remains separately visible. The stroke label explicitly reminds the physician that a haemorrhagic stroke also meets the bleeding criterion (ESC 2020 Table 10 footnote a). ≥3 flags high risk for review of modifiable factors and closer follow-up; <3 does not exclude bleeding. There is no universal annual bleeding percentage and no automatic anticoagulation decision. ESC 2024 does not endorse a particular bleeding score for deciding anticoagulation, and both ESC 2024 and ACC/AHA 2023 caution against using bleeding scores alone to withhold/withdraw anticoagulation. This historical, named tool is not advertised as an ESC 2024-preferred score.
+
+Fixtures: adult age 65 and SBP 160, all other criteria absent → 0; age 66 or extreme frailty → 1 (never 2 together); all nine components present → 9. HAS-BLED is available in Free and Pro independent tools, not automatically inferred from shared patient fields.
 
 ## TIMI UA/NSTEMI
 

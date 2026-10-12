@@ -257,7 +257,7 @@ def test_pdf_traceability_metadata_is_exported(pro_context):
     app=start_app()
     app.button(key='calculate:framingham').click().run()
     saved=app.session_state['calculation:framingham']
-    assert saved['algorithm_id']=='framingham' and saved['algorithm_version']=='2026.10.11'
+    assert saved['algorithm_id']=='framingham' and saved['algorithm_version']=='2026.10.12-scores-2'
     metadata=json.loads(PdfReader(BytesIO(saved['pdf'])).metadata.subject)
     assert metadata['input_hash']==saved['fingerprint']
     assert metadata['template_version']=='1.1' and metadata['report_version']==1

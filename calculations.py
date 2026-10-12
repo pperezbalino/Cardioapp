@@ -137,6 +137,59 @@ def grace(age, heart_rate, sbp, creatinine, killip=1, arrest=False,
     return score
 
 
+# Granger 2003, Figure 4: printed mortality readout, not GRACE 2.0.
+_GRACE_MORTALITY = ((60, .2), (70, .3), (80, .4), (90, .6), (100, .8),
+                    (110, 1.1), (120, 1.6), (130, 2.1), (140, 2.9),
+                    (150, 3.9), (160, 5.4), (170, 7.3), (180, 9.8),
+                    (190, 13), (200, 18), (210, 23), (220, 29),
+                    (230, 36), (240, 44), (250, 52))
+
+
+def grace_mortality(points):
+    """Published percentage or enclosing nomogram interval; no interpolation."""
+    number(points, 0, 372, 'grace_points')
+    if not isinstance(points, int):
+        raise ValueError('grace_points')
+    if points <= 60:
+        return '≤0.2%'
+    if points >= 250:
+        return '≥52%'
+    for (lower, low_risk), (upper, high_risk) in zip(_GRACE_MORTALITY, _GRACE_MORTALITY[1:]):
+        if points == upper:
+            return f'{high_risk:g}%'
+        if lower < points < upper:
+            return f'{low_risk:g}–{high_risk:g}%'
+    raise ValueError('grace_points')
+
+
+def grace_assessment(**values):
+    points = grace(**values)
+    return {'points': points, 'hospital_mortality': grace_mortality(points)}
+
+
+def has_bled(age, sbp, renal_dysfunction=False, liver_dysfunction=False,
+             prior_stroke=False, bleeding_history=False, on_vka=False,
+             labile_inr=False, extreme_frailty=False, bleeding_drugs=False,
+             alcohol_excess=False):
+    """HAS-BLED clinical definitions: ESC AF 2020 Table 10 (0–9 points).
+
+    Renal/hepatic and drugs/alcohol each count independently. Elderly is
+    age >65 OR extreme frailty (one point total). Labile INR applies to VKA.
+    Clinical binary criteria must be assessed by the physician before use.
+    """
+    number(age, 18, 120, 'age'); number(sbp, 1, 350, 'sbp')
+    flags = (renal_dysfunction, liver_dysfunction, prior_stroke, bleeding_history,
+             on_vka, labile_inr, extreme_frailty, bleeding_drugs, alcohol_excess)
+    if any(type(value) is not bool for value in flags):
+        raise ValueError('has_bled_criteria')
+    if labile_inr and not on_vka:
+        raise ValueError('labile_inr_requires_vka')
+    points = sum((sbp > 160, renal_dysfunction, liver_dysfunction, prior_stroke,
+                  bleeding_history, labile_inr, age > 65 or extreme_frailty,
+                  bleeding_drugs, alcohol_excess))
+    return points, 'bleed_high' if points >= 3 else 'bleed_not_high'
+
+
 def timi(age, risk_factors=False, known_cad=False, aspirin=False, angina=False,
          st_deviation=False, biomarkers=False):
     number(age, 18, 120, 'age')

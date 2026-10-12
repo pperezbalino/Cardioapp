@@ -22,7 +22,8 @@ Use Python 3.11 or 3.12. No API key is required and no external AI service is ca
 - Framingham ATP III hard coronary heart disease risk, with applicability restrictions.
 - Complete EuroSCORE II model, including Cockcroft-Gault renal clearance.
 - CHA₂DS₂-VASc, with named ACC/AHA 2023 interpretation and an ESC 2024 model note.
-- Original GRACE in-hospital point nomogram.
+- Original GRACE in-hospital point nomogram, with published mortality percentages or enclosing intervals.
+- HAS-BLED independent adult AF calculator, ESC 2020 Table 10 clinical definitions (0–9); reviewed criteria, VKA-specific INR and high-risk flag.
 - Seven-variable TIMI UA/NSTEMI and the 14-day combined endpoint.
 - Adult race-free CKD-EPI creatinine 2021.
 - Adult BMI.
@@ -31,7 +32,7 @@ Use Python 3.11 or 3.12. No API key is required and no external AI service is ca
 - Pro: PDF downloads for every calculator and manual ECG report, including inputs, units, sources, UTC time and version metadata.
 - Pro: shared adult clinical case for emergency/outpatient forms, with unknown/present/absent states, provenance, explicit review and session-local revisions.
 
-HAS-BLED and STS are not implemented. Automatic ECG interpretation is not implemented. The app does not claim otherwise.
+STS is not implemented. Automatic ECG interpretation is not implemented. The app does not claim otherwise.
 
 ## Verification
 

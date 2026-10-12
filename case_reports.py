@@ -11,7 +11,7 @@ from integrated_engine import checked, case_hash, known, evaluate, consistency, 
 from pdf_utils import make_report, generate_pdf
 from acs_pathways import pathway, SOURCE, AHA_SOURCE, nitrate_assessment
 
-TEMPLATE_VERSION = '2A.3-NTG'
+TEMPLATE_VERSION = '2A.4-GRACE-mortality'
 _REVIEW_KEY = secrets.token_bytes(32)
 
 
@@ -39,6 +39,7 @@ def score_text(score, t):
     parts = []
     for key, value in score.result.items():
         if key == 'points': parts.append(f"{t['points']}: {value}")
+        elif key == 'hospital_mortality': parts.append(f"{t['hospital_mortality']}: {value}")
         elif key == 'risk': parts.append(f"{t['risk_10yr']}: {value}%")
         elif key == 'risk_14d': parts.append(f"{t['timi_endpoint']}: {value}%")
         elif key == 'egfr': parts.append(f"{t['egfr']}: {value:.2f} mL/min/1.73 m²")

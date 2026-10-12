@@ -31,9 +31,11 @@ def start_app(lang='es', pro=True):
 def test_all_calculator_screens_and_pdfs(lang):
     app = start_app(lang)
     t = translations[lang]
-    for module in ['framingham', 'euroscore', 'chads', 'grace', 'timi', 'bmi', 'ckd']:
+    for module in ['framingham', 'euroscore', 'chads', 'grace', 'has_bled', 'timi', 'bmi', 'ckd']:
         app.selectbox(key='score').set_value(module).run()
         assert not app.exception, (lang, module)
+        if module == 'has_bled':
+            app.checkbox(key='has_bled:has_bled_reviewed').check().run()
         app.button(key=f'calculate:{module}').click().run()
         assert not app.exception, (lang, module)
         assert app.success

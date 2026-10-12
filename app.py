@@ -1,6 +1,6 @@
 from pathlib import Path
 import streamlit as st
-from tools import framingham, euroscore, chads_vasc, grace, timi, bmi, ckd_epi, drug_calculator, ecg_analysis
+from tools import framingham, euroscore, chads_vasc, grace, timi, bmi, ckd_epi, drug_calculator, ecg_analysis, has_bled
 from translations import translations, LANGUAGES
 from access_ui import render_access, clear_clinical_session
 from access import AccessDenied
@@ -39,7 +39,7 @@ render_access(t)
 workspace = st.radio(t['workspace'], ['tools_nav', 'emergency', 'outpatient'],
                      format_func=t.__getitem__, key='workspace', horizontal=True)
 modules = {'framingham': framingham, 'euroscore': euroscore, 'chads': chads_vasc,
-           'grace': grace, 'timi': timi, 'bmi': bmi, 'ckd': ckd_epi}
+           'grace': grace, 'has_bled': has_bled, 'timi': timi, 'bmi': bmi, 'ckd': ckd_epi}
 try:
     if workspace == 'tools_nav':
         with st.expander(t['scores'], expanded=True):
