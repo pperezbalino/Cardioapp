@@ -279,3 +279,17 @@ def test_forged_session_access_fails_closed_without_crashing():
     assert not app.exception
     assert app.session_state['_access_context'].plan=='free'
     assert '_clinical_case' not in app.session_state
+
+
+def test_revocation_during_export_returns_to_free_without_error(monkeypatch):
+    import clinical_ui
+    app=start_app()
+    original=clinical_ui.calculation_pdf
+    def revoke(context,saved,t):
+        monkeypatch.setenv('CARDIOAPP_PRO_INVITES','{}')
+        return original(context,saved,t)
+    monkeypatch.setattr(clinical_ui,'calculation_pdf',revoke)
+    app.button(key='calculate:framingham').click().run()
+    assert not app.exception
+    assert app.session_state['_access_context'].plan=='free'
+    assert 'calculation:framingham' not in app.session_state

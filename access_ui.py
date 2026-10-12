@@ -19,6 +19,8 @@ def render_access(t):
         clear_clinical_session()
     st.caption('CardioApp Pro' if context.plan == 'pro' else 'CardioApp Free')
     st.caption(t['price_note'].format(price=PRO_PRICE_USD))
+    if st.session_state.pop('_access_notice', False):
+        st.info(t['pro_required'])
     if context.plan == 'pro':
         if st.button(t['logout'], key='access:logout'):
             clear_clinical_session()
