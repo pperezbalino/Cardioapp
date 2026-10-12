@@ -1,4 +1,4 @@
-"""Versioned, clinician-entered case data. No AI, storage or automatic scores."""
+"""Versioned, clinician-entered case data. Independent of reports, score adapters and providers."""
 from dataclasses import dataclass, field, asdict
 from datetime import datetime, timezone
 import hashlib
@@ -9,7 +9,7 @@ import uuid
 
 from access import Feature, require
 
-SCHEMA_VERSION = '1.0'
+SCHEMA_VERSION = '1.3'
 
 
 @dataclass(frozen=True)
@@ -49,6 +49,30 @@ FIELD_SPECS = [
     FieldSpec('ecg_notes', 'studies', 'text'), FieldSpec('echo_notes', 'studies', 'text'),
     FieldSpec('other_studies', 'studies', 'text'),
     FieldSpec('clinical_notes', 'notes', 'text'),
+    FieldSpec('acs_context', 'triage', 'acs'),
+    FieldSpec('symptom_duration_min', 'reperfusion', 'number', 'min', 0, 43200),
+    *[FieldSpec(key, 'reperfusion', 'tri') for key in ['ecg_reviewed', 'reperfusion_activated']],
+    FieldSpec('reperfusion_strategy', 'reperfusion', 'strategy'),
+    FieldSpec('reperfusion_times', 'reperfusion', 'text'),
+    FieldSpec('reperfusion_notes', 'reperfusion', 'text'),
+    FieldSpec('pci_delay_min', 'reperfusion', 'number', 'min', 0, 1440),
+    FieldSpec('lysis_eligible', 'reperfusion', 'tri'),
+    *[FieldSpec(key, 'acs_risk', 'tri') for key in ['haemodynamic_instability',
+        'refractory_pain', 'dangerous_arrhythmia', 'mechanical_complication',
+        'hf_acs', 'recurrent_dynamic_ecg', 'nstemi_confirmed', 'dynamic_ecg',
+        'transient_st', 'high_suspicion_ua']],
+    FieldSpec('bleeding_reviewed', 'acs_treatment', 'tri'),
+    FieldSpec('antiplatelet_plan', 'acs_treatment', 'text'),
+    FieldSpec('anticoagulation_plan', 'acs_treatment', 'text'),
+    FieldSpec('support_plan', 'acs_treatment', 'text'),
+    FieldSpec('antiischaemic_given', 'antiischaemic', 'text'),
+    FieldSpec('angina_response', 'antiischaemic', 'response'),
+    FieldSpec('ntg_contraindications', 'antiischaemic', 'tri'),
+    FieldSpec('killip', 'score_context', 'number', None, 1, 4),
+    *[FieldSpec(key, 'score_context', 'tri') for key in [
+        'arrest', 'st_deviation', 'timi_st', 'known_cad', 'aspirin', 'angina',
+        'cad_family', 'af_confirmed', 'treated', 'renal_stable', 'primary_prevention']],
+
 ]
 FIELDS = {spec.key: spec for spec in FIELD_SPECS}
 
@@ -110,6 +134,19 @@ def parse_value(spec, raw):
         if raw not in ('unknown', 'present', 'absent'):
             raise ValueError(spec.key)
         return None if raw == 'unknown' else raw == 'present'
+    if spec.kind == 'acs':
+        if raw not in ('unknown', 'suspected_acs', 'stemi', 'ua_nstemi', 'not_acs'):
+            raise ValueError(spec.key)
+        return None if raw == 'unknown' else raw
+    if spec.kind == 'strategy':
+        if raw not in ('unknown', 'primary_pci', 'transfer_pci', 'fibrinolysis'):
+            raise ValueError(spec.key)
+        return None if raw == 'unknown' else raw
+    if spec.kind == 'response':
+        if raw not in ('unknown', 'not_yet_treated', 'under_treatment', 'pain_controlled',
+                       'persistent_despite_treatment', 'contraindicated_or_intolerant'):
+            raise ValueError(spec.key)
+        return None if raw == 'unknown' else raw
     if spec.kind == 'sex':
         if raw not in ('unknown', 'M', 'F'):
             raise ValueError(spec.key)
@@ -128,9 +165,9 @@ def parse_value(spec, raw):
     number = float(raw.replace(',', '.'))
     if not math.isfinite(number) or not spec.low <= number <= spec.high:
         raise ValueError(spec.key)
-    if spec.key == 'age' and not number.is_integer():
+    if spec.key in ('age', 'killip') and not number.is_integer():
         raise ValueError(spec.key)
-    return number
+    return int(number) if spec.key in ('age', 'killip') else number
 
 
 def save_case(context, case, raw_values, *, mode, alias='', confirmed=False):
@@ -176,7 +213,7 @@ def raw_values(case):
         value = value.value if value else None
         if spec.kind == 'tri':
             result[spec.key] = 'unknown' if value is None else 'present' if value else 'absent'
-        elif spec.kind == 'sex':
+        elif spec.kind in ('sex', 'acs', 'strategy', 'response'):
             result[spec.key] = value or 'unknown'
         else:
             result[spec.key] = '' if value is None else format(value, 'g') if isinstance(value, float) else str(value)

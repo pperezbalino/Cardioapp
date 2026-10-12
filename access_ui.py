@@ -6,7 +6,7 @@ from access import AccessDenied, PRO_PRICE_USD, current_access, pilot_access
 
 def clear_clinical_session():
     for key in list(st.session_state):
-        if key.startswith(('case:', '_clinical_', 'report:', 'calculation:', 'download:',
+        if key.startswith(('case:', 'case_report:', '_clinical_', 'report:', 'calculation:', 'download:',
                            'framingham:', 'euroscore:', 'chads:', 'grace:', 'timi:',
                            'bmi:', 'ckd:', 'drugs:', 'ecg:')):
             del st.session_state[key]
