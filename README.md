@@ -70,3 +70,7 @@ Reference results require professional review and do not replace clinical judgem
 The app itself does not send patient uploads to an AI service or deliberately persist them on disk. Hosting and session access must still be appropriate for the data entered. Use initials rather than full patient names.
 
 Pablo Pérez Baliño · © 2025-2026 CardioApp
+
+### Partial intake assessment
+
+Pro assessment uses a transient snapshot of valid current structured entries without requiring a save first. Missing or malformed clinical entries remain unknown; they disable only dependent calculations and never reuse an old value. Optional aliases accept spaces and Unicode. An invalid optional alias is ignored with a nonblocking correction note. Saving preserves valid fields even when unrelated entries need correction. This preview does not confirm the canonical case or authorize report export: reviewed reports continue to require the saved snapshot and medical review. No external AI calls or persistence are introduced.
