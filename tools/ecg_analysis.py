@@ -1,61 +1,93 @@
+"""Manual ECG documentation with validated upload; no synthetic diagnoses."""
+import hashlib
+from io import BytesIO
+from pathlib import Path
+import warnings
 
+from PIL import Image, UnidentifiedImageError
+from pypdf import PdfReader
 import streamlit as st
-import tempfile
-import os
-from reportlab.lib.pagesizes import letter
-from reportlab.pdfgen import canvas
-from translations import translations
-import datetime
 
-def analyze_ecg_report(image_path, patient_initials, license_number, selected_language):
-    t = translations[selected_language]
-    diagnosis = t.get("possible_ecg_diagnosis", "Sin hallazgos específicos")
+from clinical_ui import fingerprint, show_result
+from pdf_utils import make_report, generate_pdf
 
-    now = datetime.datetime.now()
-    date_str = now.strftime("%Y-%m-%d")
-    time_str = now.strftime("%H:%M")
+MAX_BYTES = 10 * 1024 * 1024
 
-    filename = f"ECG_Report_{patient_initials}_{date_str}.pdf"
-    c = canvas.Canvas(filename, pagesize=letter)
-    width, height = letter
 
-    c.setFont("Helvetica-Bold", 16)
-    c.drawString(50, height - 50, t.get("ecg_report_title", "Informe de ECG"))
+def validate_upload(data, filename):
+    if not data or len(data) > MAX_BYTES:
+        raise ValueError('invalid_file')
+    extension = Path(filename).suffix.lower()
+    try:
+        if extension == '.pdf':
+            reader = PdfReader(BytesIO(data))
+            if reader.is_encrypted or not 1 <= len(reader.pages) <= 30:
+                raise ValueError('invalid_file')
+            return {'kind': 'pdf', 'pages': len(reader.pages)}
+        if extension not in ('.png', '.jpg', '.jpeg'):
+            raise ValueError('invalid_file')
+        with warnings.catch_warnings():
+            warnings.simplefilter('error', Image.DecompressionBombWarning)
+            with Image.open(BytesIO(data)) as image:
+                if image.format not in ('PNG', 'JPEG') or image.width * image.height > 25_000_000:
+                    raise ValueError('invalid_file')
+                image.verify()
+            with Image.open(BytesIO(data)) as image:
+                image.load()
+        return {'kind': 'image'}
+    except (ValueError, OSError, UnidentifiedImageError, Image.DecompressionBombWarning,
+            Image.DecompressionBombError) as error:
+        raise ValueError('invalid_file') from error
+    except Exception as error:
+        raise ValueError('invalid_file') from error
 
-    c.setFont("Helvetica", 12)
-    c.drawString(50, height - 80, f"{t.get('patient_initials', 'Iniciales')}: {patient_initials}")
-    c.drawString(50, height - 100, f"{t.get('license_number', 'Licencia')}: {license_number}")
-    c.drawString(50, height - 120, f"{t.get('date', 'Fecha')}: {date_str} - {t.get('time', 'Hora')}: {time_str}")
 
-    c.drawString(50, height - 160, t.get("ecg_findings", "Hallazgos:"))
-    c.drawString(70, height - 180, diagnosis)
+def manual_report(data, filename, initials, registration, findings, confirmed, t):
+    validate_upload(data, filename)
+    if not all([initials.strip(), registration.strip(), findings.strip(), confirmed]):
+        raise ValueError('ecg_required')
+    inputs = [(t['patient_initials'], initials.strip()), (t['license_number'], registration.strip()),
+              (t['attached_file'], Path(filename).name),
+              (t['file_hash'], hashlib.sha256(data).hexdigest()),
+              (t['confirm_manual'], t['yes'])]
+    report = make_report(t['ecg'], inputs, [(t['findings'], findings.strip()),
+                         (t['result'], t['manual_status'])], t['ecg_note'], [t['manual_status']], t)
+    report['attachment'] = {'name': Path(filename).name, 'data': data}
+    return report
 
-    c.setFont("Helvetica-Oblique", 8)
-    c.drawString(50, 50, t.get("disclaimer_footer", ""))
-
-    c.showPage()
-    c.save()
-    return filename
 
 def calcular(t):
-    st.subheader("Análisis de ECG (IA)")
-
-    uploaded_file = st.file_uploader("Sube imagen o PDF del ECG", type=["png","jpg","jpeg","pdf"])
-    patient_initials = st.text_input("Iniciales del paciente", value="")
-    license_number = st.text_input("Número de licencia médica", value="")
-    lang = st.session_state.language
-
-    if st.button("Analizar ECG"):
-        if uploaded_file and patient_initials and license_number:
-            with tempfile.NamedTemporaryFile(delete=False) as tmp:
-                tmp.write(uploaded_file.read())
-                tmp_path = tmp.name
-            report_file = analyze_ecg_report(tmp_path, patient_initials, license_number, lang)
-            with open(report_file, "rb") as f:
-                data = f.read()
-            st.success("Informe de ECG generado")
-            st.download_button("Descargar informe ECG", data=data, file_name=report_file, mime="application/pdf")
-            return f"Informe generado: {report_file}"
-        else:
-            st.error("Debe completar todos los campos y subir el archivo.")
-    return None
+    st.subheader(t['ecg']); st.info(t['ecg_note'])
+    uploaded = st.file_uploader(t['upload'], type=['png', 'jpg', 'jpeg', 'pdf'], key='ecg:upload')
+    data = uploaded.getvalue() if uploaded is not None else b''
+    filename = uploaded.name if uploaded is not None else ''
+    valid = False
+    if uploaded is not None:
+        try:
+            info = validate_upload(data, filename); valid = True
+            if info['kind'] == 'image':
+                st.image(data, width='stretch')
+            else:
+                st.caption(f"{t['pages']}: {info['pages']}")
+            st.download_button(t['view_original'], data=data, file_name=Path(filename).name,
+                               mime='application/pdf' if info['kind'] == 'pdf' else 'image/' + ('png' if filename.lower().endswith('.png') else 'jpeg'),
+                               key='ecg:original')
+        except ValueError:
+            st.error(t['invalid_file'])
+    initials = st.text_input(t['patient_initials'], max_chars=40, key='ecg:initials')
+    registration = st.text_input(t['license_number'], max_chars=80, key='ecg:registration')
+    findings = st.text_area(t['findings'], max_chars=20000, height=180, key='ecg:findings')
+    confirmed = st.checkbox(t['confirm_manual'], key='ecg:confirmed')
+    values = {'sha256': hashlib.sha256(data).hexdigest(), 'filename': filename,
+              'initials': initials, 'registration': registration,
+              'findings': findings, 'confirmed': confirmed}
+    if st.button(t['create_report'], key='calculate:ecg'):
+        try:
+            if not valid:
+                raise ValueError('ecg_required')
+            report = manual_report(data, filename, initials, registration, findings, confirmed, t)
+            st.session_state['report:ecg'] = {'fingerprint': fingerprint(values, t),
+                                            'report': report, 'pdf': generate_pdf(report, t)}
+        except ValueError as error:
+            st.session_state.pop('report:ecg', None); st.error(t[str(error)])
+    show_result('ecg', values, t)

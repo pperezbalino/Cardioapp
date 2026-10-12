@@ -1,2 +1,6 @@
-streamlit
-reportlab
+streamlit>=1.49,<2
+reportlab>=4.2,<5
+pillow>=10.4,<13
+pypdf>=5,<7
+arabic-reshaper>=3,<4
+python-bidi>=0.6,<0.7
