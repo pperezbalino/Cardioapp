@@ -8,7 +8,7 @@ import calculations as calc
 from pdf_utils import make_report, generate_pdf
 from access import Feature, allows, current_access, require
 
-ALGORITHM_VERSION = '2026.10.11'
+ALGORITHM_VERSION = '2026.10.12-scores-2'
 
 from clinical_sources import SOURCES, NOTES
 from drug_references import get_reference, profiles, reference_rates, outside_reference, VERSION as DRUG_REFERENCE_VERSION, PRO_DRUGS
@@ -167,6 +167,19 @@ def render_score(module, t):
         fields.number('age', 18, 120, 70); fields.sex()
         for key in ['hypertension', 'diabetes', 'heart_failure', 'stroke', 'vascular_disease']:
             fields.flag(key)
+    elif module == 'has_bled':
+        fields.number('age', 18, 120, 65)
+        fields.number('sbp', 1, 350, 130)
+        for key in ['renal_dysfunction', 'liver_dysfunction', 'prior_stroke',
+                    'bleeding_history', 'extreme_frailty', 'bleeding_drugs', 'alcohol_excess']:
+            fields.flag(key)
+        on_vka = fields.flag('on_vka')
+        if on_vka:
+            fields.flag('labile_inr')
+        else:
+            st.session_state.pop(fields.key('labile_inr'), None)
+            fields.add('labile_inr', False, t['labile_inr'], t['not_applicable'])
+        reviewed = fields.flag('has_bled_reviewed')
     elif module == 'grace':
         fields.number('age', 18, 120, 65)
         fields.number('heart_rate', 1, 350, 85); fields.number('sbp', 1, 350, 120)
@@ -202,7 +215,15 @@ def render_score(module, t):
                 score, interpretation = calc.chads_vasc(**values)
                 results = [(t['chads'], str(score)), (t['result'], t[interpretation])]
             elif module == 'grace':
-                results = [(t['points'], str(calc.grace(**values)))]
+                result = calc.grace_assessment(**values)
+                results = [(t['points'], str(result['points'])),
+                           (t['hospital_mortality'], result['hospital_mortality'])]
+            elif module == 'has_bled':
+                if not reviewed:
+                    raise ValueError('has_bled_review_required')
+                params = {k: v for k, v in values.items() if k != 'has_bled_reviewed'}
+                score, interpretation = calc.has_bled(**params)
+                results = [(t['has_bled'], str(score)), (t['bleeding_risk'], t[interpretation])]
             elif module == 'timi':
                 score, risk = calc.timi(**values)
                 results = [(t['timi'], str(score)), (t['timi_endpoint'], f'≈{risk}%')]
@@ -214,7 +235,7 @@ def render_score(module, t):
             submit_result(module, values, fields.inputs, results, t)
         except ValueError as error:
             st.session_state.pop(f'calculation:{module}', None)
-            st.error(t['framingham_ineligible'] if str(error) == 'framingham_ineligible' else t['invalid_input'])
+            st.error(t[str(error)] if str(error) in ('framingham_ineligible', 'has_bled_review_required') else t['invalid_input'])
     show_result(module, fields.values, t)
     source_panel(module, t)
 

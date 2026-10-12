@@ -6,7 +6,7 @@ import json
 import calculations as calc
 from clinical_case import FIELD_SPECS, require_owner, parse_value
 
-ALGORITHM_VERSION = '2026.10.12'
+ALGORITHM_VERSION = '2026.10.12-scores-2'
 RISK_FIELDS = ('hypertension', 'diabetes', 'dyslipidemia', 'smoker', 'cad_family')
 
 
@@ -107,7 +107,7 @@ def evaluate(context, case):
     if case.mode == 'emergency':
         run('grace', ('age', 'heart_rate', 'sbp', 'creatinine', 'killip', 'arrest', 'st_deviation', 'biomarkers'),
             ('acs_context',), lambda v: v['acs_context'] in ('suspected_acs', 'stemi', 'ua_nstemi'),
-            lambda v: {'points': calc.grace(**{k: v[k] for k in ('age', 'heart_rate', 'sbp', 'creatinine', 'killip', 'arrest', 'st_deviation', 'biomarkers')})})
+            lambda v: calc.grace_assessment(**{k: v[k] for k in ('age', 'heart_rate', 'sbp', 'creatinine', 'killip', 'arrest', 'st_deviation', 'biomarkers')}))
         run('timi', ('age', *RISK_FIELDS, 'known_cad', 'aspirin', 'angina', 'timi_st', 'biomarkers'),
             ('acs_context',), lambda v: v['acs_context'] == 'ua_nstemi',
             lambda v: dict(zip(('points', 'risk_14d'), calc.timi(v['age'],

@@ -40,7 +40,7 @@ def acute(context, **extra):
 def test_complete_acute_scores_and_distinct_endpoints(pro_context):
     case = acute(pro_context)
     score = results(pro_context, case)
-    assert score['grace'].result == {'points': 108}
+    assert score['grace'].result == {'points': 108, 'hospital_mortality': '0.8–1.1%'}
     assert score['timi'].result == {'points': 2, 'risk_14d': 8}
     assert score['ckd'].result['egfr'] == pytest.approx(83.5245, abs=.01)
     assert score['chads'].status == 'missing'
@@ -235,7 +235,7 @@ def test_emergency_ui_complete_case_calculates_and_invalidates_saved_report(lang
     app.run();app.checkbox(key=p+'review').check().run();app.button(key=p+'save').click().run()
     assert not app.exception
     case=app.session_state['_clinical_case']
-    assert results(app.session_state['_access_context'],case)['grace'].result=={'points':108}
+    assert results(app.session_state['_access_context'],case)['grace'].result=={'points':108, 'hospital_mortality':'0.8–1.1%'}
     r='case_report:'+case.case_id+':'+lang+':emergency:'
     app.button(key=r+'create').click().run();app.checkbox(key=r+'review').check().run()
     app.button(key=r+'confirm').click().run();assert app.get('download_button')
