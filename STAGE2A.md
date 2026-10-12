@@ -4,24 +4,24 @@ This review branch extends stage 1 without deployment, billing, API credentials 
 
 ## Clinical workflow
 
-Both intake modes use the same confirmed clinical case. New schema 1.1 inputs start unknown. Missing or unconfirmed inputs never count as negative, normal or zero. Forms accept the displayed canonical units only; adapters reject inconsistent unit metadata and never silently convert values. Free text stays physician-entered narrative, without automatic extraction or diagnoses.
+Both intake modes use the same confirmed clinical case. New schema 1.2 inputs start unknown. Missing or unconfirmed inputs never count as negative, normal or zero. Forms accept the displayed canonical units only; adapters reject inconsistent unit metadata and never silently convert values. Free text stays physician-entered narrative, without automatic extraction or diagnoses.
 
 Emergency care supports the initial chest-pain workflow:
 
-- Original GRACE 2003 points require a physician-selected suspected ACS or UA/NSTEMI context, age, heart rate, systolic pressure, creatinine, integer Killip class, cardiac arrest at presentation, ST deviation and biomarkers.
+- Original GRACE 2003 points require a physician-selected suspected ACS, STEMI or UA/NSTEMI context, age, heart rate, systolic pressure, creatinine, integer Killip class, cardiac arrest at presentation, ST deviation and biomarkers.
 - TIMI UA/NSTEMI requires that specific physician-selected context and all seven criteria. The CAD-risk criterion derives from five confirmed factors; its coronary family history is separate from the broader cardiovascular family history. Its ST threshold is recorded separately from GRACE's ST deviation. The displayed percentage retains the 14-day combined endpoint, not isolated mortality.
 
 Outpatient care supports general cardiovascular consultation:
 
 - Framingham ATP III hard CHD is explicitly historical, primary prevention, ages 30–79, excluding diabetes and established vascular disease. No ASCVD or modern prevention-model equivalence is claimed.
 
-Both modes support CHA2DS2-VASc points only when AF is explicitly confirmed, CKD-EPI 2021 only when creatinine is confirmed steady-state without AKI, and adult BMI when weight and height are confirmed. Integrated results do not generate a treatment or rule out emergencies. EuroSCORE II and infusion conversion remain independent tools because these first two flows do not justify automatic surgical or prescribing-context integration.
+Both modes support CHA2DS2-VASc points only when AF is explicitly confirmed, CKD-EPI 2021 only when creatinine is confirmed steady-state without AKI, and adult BMI when weight and height are confirmed. Scores do not rule out emergencies or generate medication orders. The separate clinician-selected therapeutic reference pathways are documented in [ACS_PATHWAYS.md](ACS_PATHWAYS.md). EuroSCORE II and infusion conversion remain independent tools because these first two flows do not justify automatic surgical or prescribing-context integration.
 
 The assessment displays the precise confirmed inputs, missing inputs, applicability status, source and model limitation. It checks diastolic/systolic ordering, HDL/total-cholesterol ordering and known coronary stenosis versus explicitly absent vascular disease. These inconsistencies block affected calculations and report preparation/review. Elevated biomarkers in an explicitly different coronary context produce a review notice, without inferring ACS. This is a small documented rule set, not comprehensive contradiction detection in narrative, units or clinical reasoning.
 
 ## Editable local drafts
 
-A reviewed saved case can populate an emergency progress/referral draft or a cardiovascular consultation draft. Templates contain confirmed documented information and explicit missing-field lists. Clinical assessment and management/follow-up remain physician-completion placeholders. There are no generated diagnostic or treatment inferences.
+A reviewed saved case can populate an emergency progress/referral draft or a cardiovascular consultation draft. Templates contain confirmed documented information and explicit missing-field lists. Clinical assessment and management/follow-up remain physician-completion placeholders. There are no AI-generated diagnostic or treatment inferences. Deterministic therapeutic reference routes are displayed separately from editable physician decisions.
 
 Physicians can edit every narrative section without altering the canonical case or deterministic results. Each report carries its owner, case ID/revision/hash, language, template version, text version, creation time and separate review metadata. A change to the text removes review; a change to the case invalidates the draft. Unsaved case edits hide integrated calculations and export. Report editor values survive navigation and language changes within the session; separate language drafts are not automatic translations of physician prose.
 

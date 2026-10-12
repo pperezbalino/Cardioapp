@@ -7,10 +7,11 @@ import json
 
 from access import Feature, require
 from clinical_case import FIELD_SPECS, utc_now
-from integrated_engine import checked, case_hash, known, evaluate, consistency
+from integrated_engine import checked, case_hash, known, evaluate, consistency, emergency_priority
 from pdf_utils import make_report, generate_pdf
+from acs_pathways import pathway, SOURCE, AHA_SOURCE
 
-TEMPLATE_VERSION = '2A.1'
+TEMPLATE_VERSION = '2A.2-ACS'
 _REVIEW_KEY = secrets.token_bytes(32)
 
 
@@ -21,7 +22,7 @@ def field_value(spec, value, t):
         return t['case_present' if value else 'case_absent']
     if spec.kind == 'sex':
         return t[value]
-    if spec.kind == 'acs':
+    if spec.kind in ('acs', 'strategy'):
         return t[value]
     if spec.kind == 'number':
         return f'{value:g}' + (f' {spec.unit}' if spec.unit and spec.unit != 'years' else '')
@@ -80,7 +81,8 @@ def require_current(context, case, draft):
     if not isinstance(draft, ReportDraft) or draft.owner != context.subject:
         raise PermissionError('report_owner')
     if (draft.case_id != case.case_id or draft.case_revision != case.revision
-            or draft.input_hash != case_hash(case) or draft.mode != case.mode):
+            or draft.input_hash != case_hash(case) or draft.mode != case.mode
+            or draft.template_version != TEMPLATE_VERSION):
         raise ValueError('report_stale')
 
 
@@ -89,7 +91,7 @@ def require_reviewed_case(context, case):
     if case.review_state != 'reviewed' or any(
         datum.value is not None and not datum.confirmed for datum in case.facts.values()):
         raise ValueError('report_required')
-    if any(issue.code in ('bp_order', 'chol_order', 'cad_history') for issue in consistency(context, case)):
+    if any(issue.code in ('bp_order', 'chol_order', 'cad_history', 'sest_lysis_conflict') for issue in consistency(context, case)):
         raise ValueError('report_required')
 
 
@@ -108,7 +110,8 @@ def create_draft(context, case, t):
         sections[group] = sections.get(group, '') + ('\n' if group in sections else '') + line
     for group, fields in missing.items():
         sections[group] += ('\n' if sections[group] else '') + t['score_missing'].format(fields=', '.join(fields))
-    sections['report_assessment'] = t['report_pending']
+    treatment = pathway(context, case)
+    sections['report_assessment'] = t['stemi_documented' if treatment.branch == 'stemi' else 'sest_documented'] if treatment else t['report_pending']
     sections['report_plan'] = t['report_pending']
     return ReportDraft(context.subject, case.case_id, case.revision, case_hash(case), case.mode,
                        t['_lang'], tuple(sections.items()), created_at=utc_now())
@@ -150,13 +153,23 @@ def export_draft(context, case, draft, t):
         raise ValueError('report_stale')
     # Recompute from the reviewed snapshot; scores are never parsed from narrative.
     scores = evaluate(context, case)
+    treatment = pathway(context, case)
     inputs = [(t['case_alias'], case.alias or t['case_unknown']),
               (t['case_version'], str(case.revision))]
     for spec in FIELD_SPECS:
         if known(case, spec.key) is None:
             continue
         inputs.append((t[spec.key], field_value(spec, known(case, spec.key), t)))
+    priority = emergency_priority(context, case)
     results = [(t[k], value) for k, value in draft.sections]
+    if priority:
+        results.insert(0, (t['stemi'], t['stemi_priority']))
+        results.insert(1, (t['reperfusion_activated'], t['activation_'+priority.activation]))
+    if treatment:
+        results += [(t['acs_pathway'], t[treatment.route]), (t['acs_pathway'], t['acs_pathway_notice'])]
+        results += [(t['acs_pathway'], t[step]) for step in treatment.supplemental]
+        if treatment.missing:
+            results += [(t['acs_pathway'], t['score_missing'].format(fields=', '.join(t[k] for k in treatment.missing)))]
     results += [(t['integrated_title'], t['integrated_notice'])]
     from clinical_sources import SOURCES, NOTES
     for score in scores:
@@ -169,8 +182,18 @@ def export_draft(context, case, draft, t):
         actor=draft.reviewed_by, time=draft.reviewed_at, version=draft.version))]
     sources = list(dict.fromkeys(source for score in scores if score.status == 'ready'
                                 for source in SOURCES[score.algorithm_id]))
+    if treatment:
+        sources.extend([SOURCE, AHA_SOURCE])
+    if priority:
+        sources.append('ESC ACS Guidelines (2023), sections 5.2.1 and 5.3: https://doi.org/10.1093/eurheartj/ehad191')
     report = make_report(t['report_title_' + case.mode], inputs, results,
                          t['report_notice'] + ' ' + t['report_documented'], sources, t, context=context)
+    if priority:
+        report['priority_note'] = t['stemi_priority'] + ' ' + t['activation_'+priority.activation]
+    if treatment:
+        report['priority_note'] = (report.get('priority_note', '') + ' ' + t[treatment.route]).strip()
+        report['pathway_id'] = treatment.branch
+        report['pathway_version'] = treatment.version
     report.update(template_version=draft.template_version, report_version=draft.version,
                   algorithm_id='integrated-case', algorithm_version=scores[0].algorithm_version,
                   input_hash=draft.input_hash, case_id=case.case_id, case_revision=case.revision,

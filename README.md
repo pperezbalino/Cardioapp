@@ -6,7 +6,7 @@ The recovered logo and the three main sections (scores, infusions and ECG) are p
 
 ## Free and Pro pilot
 
-Free is the default: independent calculators, without advertising or report generation. Pro pilot access adds shared emergency/outpatient cases, deterministic integrated assessment, editable reviewed report drafts and PDF/manual ECG reports. The target Pro price is US$5.99/month; no billing or AI is active. Access is verified by server-configured invitations, not a browser plan selector. See [STAGE1.md](STAGE1.md) for the access foundation and [STAGE2A.md](STAGE2A.md) for the integrated workflow and its limits.
+Free is the default: independent calculators, without advertising or report generation. Pro pilot access adds shared emergency/outpatient cases, deterministic integrated assessment, editable reviewed report drafts and PDF/manual ECG reports. The target Pro price is US$5.99/month; no billing or AI is active. Access is verified by server-configured invitations, not a browser plan selector. See [STAGE1.md](STAGE1.md) for the access foundation and [STAGE2A.md](STAGE2A.md) for the integrated workflow and [ACS_PATHWAYS.md](ACS_PATHWAYS.md) for the separate CEST/SEST therapeutic reference paths and their review limits.
 
 ## Run locally
 
@@ -47,6 +47,7 @@ Tests cover source-based numeric fixtures, original failure cases, boundaries an
 - `calculations.py`: model arithmetic, independent of Streamlit and language.
 - `access.py` / `access_ui.py`: server-issued pilot entitlements and access controls.
 - `clinical_case.py` / `case_ui.py`: versioned shared clinical data and the two intake modes.
+- `acs_pathways.py`: distinct clinician-selected STEMI/NSTE-ACS reference therapeutic routes, with ESC 2023 rules and AHA/ACC 2025 comparison notes.
 - `integrated_engine.py`: confirmed-case score adapters and a limited consistency rule set.
 - `case_reports.py` / `integrated_ui.py`: editable local drafts, separate physician review and guarded export.
 - `copilot_provider.py`: provider protocol and explicitly local simulation; no model calls.

@@ -2,9 +2,10 @@
 import streamlit as st
 
 from clinical_case import require_owner, FIELDS
-from integrated_engine import case_hash, evaluate, consistency
+from integrated_engine import case_hash, evaluate, consistency, emergency_priority
 from case_reports import (create_draft, edit_draft, review_draft, export_draft, score_text, field_value)
 from copilot_provider import simulate
+from acs_pathways import pathway, SOURCE, AHA_SOURCE
 
 
 def render_integrated(context, case, t, *, unsaved):
@@ -14,9 +15,28 @@ def render_integrated(context, case, t, *, unsaved):
     if unsaved:
         st.info(t['case_unsaved'])
         return
+    treatment = pathway(context, case)
+    if treatment:
+        st.subheader(t['acs_pathway'])
+        st.caption(t['acs_pathway_notice'])
+        st.warning(t[treatment.route])
+        if treatment.reasons:
+            st.write(t['inputs'] + ': ' + ', '.join(t[k] for k in treatment.reasons))
+        if treatment.missing:
+            st.write(t['score_missing'].format(fields=', '.join(t[k] for k in treatment.missing)))
+        for step in treatment.supplemental:
+            st.write(t[step])
+        st.caption(SOURCE)
+        st.caption(AHA_SOURCE)
     issues = consistency(context, case)
     for issue in issues:
         st.warning(t[issue.code])
+    priority = emergency_priority(context, case)
+    if priority:
+        st.warning(t['activation_'+priority.activation])
+        st.caption(t['stemi_reference'])
+        st.caption('ESC ACS (2023), 5.2.1 / 5.3: https://doi.org/10.1093/eurheartj/ehad191')
+        st.caption(t['secondary_scores'])
     scores = evaluate(context, case)
     for score in scores:
         with st.expander(t[score.algorithm_id], expanded=score.status == 'ready'):
@@ -83,3 +103,13 @@ def render_integrated(context, case, t, *, unsaved):
                                'application/pdf', key=prefix+'download')
         except ValueError as error:
             st.error(t.get(str(error), t['report_required']))
+
+
+
+def render_priority_notice(t, mode, selected_context):
+    # The physician-selected draft context prompts before saving or scoring.
+    if mode == 'emergency' and selected_context == 'stemi':
+        st.error(t['stemi_priority'])
+        st.caption(t['stemi_origin'])
+    elif mode == 'emergency' and selected_context == 'ua_nstemi':
+        st.warning(t['sest_priority'])

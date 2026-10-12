@@ -112,6 +112,8 @@ def generate_pdf(report, t, *, context=None):
 
     story = [para(report['title'], True), Spacer(1, 10),
              para(f"{t['generated_at']}: {report['generated_at']}"), heading_gap(8)]
+    if report.get('priority_note'):
+        story += [para(report['priority_note']), Spacer(1, 8)]
     for name, items in [(t['inputs'], report['inputs']), (t['result'], report['results'])]:
         story += [para(name, True), heading_gap(8)]
         for label, value in items:
@@ -150,7 +152,7 @@ def generate_pdf(report, t, *, context=None):
         canvas.setTitle(report['title']); canvas.setAuthor('CardioApp')
         canvas.setSubject(json.dumps({key: report[key] for key in
             ['template_version', 'report_version', 'algorithm_id', 'algorithm_version', 'input_hash', 'case_id', 'case_revision',
-             'review_hash', 'reviewed_by', 'reviewed_at']
+             'review_hash', 'reviewed_by', 'reviewed_at', 'pathway_id', 'pathway_version']
             if key in report}, sort_keys=True))
         logo = ROOT / 'logo.png'
         if logo.exists():

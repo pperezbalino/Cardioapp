@@ -25,7 +25,7 @@ def checked(context, case):
             raise ValueError('unit:' + spec.key)
         value = fact.value
         raw = ('unknown' if value is None else 'present' if value else 'absent') if spec.kind == 'tri' else (
-            'unknown' if value is None else value) if spec.kind in ('sex', 'acs') else (
+            'unknown' if value is None else value) if spec.kind in ('sex', 'acs', 'strategy') else (
             '' if value is None else str(value))
         if parse_value(spec, raw) != value:
             raise ValueError(spec.key)
@@ -48,6 +48,8 @@ class Issue:
 def consistency(context, case):
     checked(context, case)
     issues = []
+    if known(case, 'acs_context') == 'ua_nstemi' and known(case, 'reperfusion_strategy') == 'fibrinolysis':
+        issues.append(Issue('sest_lysis_conflict', ('acs_context', 'reperfusion_strategy')))
     if known(case, 'known_cad') is True and known(case, 'vascular_disease') is False:
         issues.append(Issue('cad_history', ('known_cad', 'vascular_disease')))
     def both(a, b):
@@ -102,7 +104,7 @@ def evaluate(context, case):
         results.append(ScoreResult(name, status, inputs, output, missing, reason, digest, case.revision))
     if case.mode == 'emergency':
         run('grace', ('age', 'heart_rate', 'sbp', 'creatinine', 'killip', 'arrest', 'st_deviation', 'biomarkers'),
-            ('acs_context',), lambda v: v['acs_context'] in ('suspected_acs', 'ua_nstemi'),
+            ('acs_context',), lambda v: v['acs_context'] in ('suspected_acs', 'stemi', 'ua_nstemi'),
             lambda v: {'points': calc.grace(**{k: v[k] for k in ('age', 'heart_rate', 'sbp', 'creatinine', 'killip', 'arrest', 'st_deviation', 'biomarkers')})})
         run('timi', ('age', *RISK_FIELDS, 'known_cad', 'aspirin', 'angina', 'timi_st', 'biomarkers'),
             ('acs_context',), lambda v: v['acs_context'] == 'ua_nstemi',
@@ -123,3 +125,21 @@ def evaluate(context, case):
     run('bmi', ('weight', 'height'), (), lambda v: True,
         lambda v: {'bmi': calc.bmi(v['weight'], v['height'])[0]})
     return results
+
+
+@dataclass(frozen=True)
+class EmergencyPriority:
+    code: str
+    activation: str
+    missing_documentation: tuple[str, ...]
+
+
+def emergency_priority(context, case):
+    checked(context, case)
+    if case.mode != 'emergency' or known(case, 'acs_context') != 'stemi':
+        return None
+    value = known(case, 'reperfusion_activated')
+    status = 'documented' if value is True else 'not_activated' if value is False else 'unknown'
+    fields = ('symptom_duration_min', 'ecg_reviewed', 'reperfusion_activated',
+              'reperfusion_strategy', 'reperfusion_times', 'reperfusion_notes')
+    return EmergencyPriority('stemi', status, tuple(k for k in fields if known(case, k) is None))
